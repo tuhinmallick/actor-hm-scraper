@@ -1,0 +1,16 @@
+{
+    "title": "HM.com actor",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "inputCountry":{
+            "title": "Country",
+            "type": "string",
+            "description": "Select country",
+            "editor": "select",
+            "default": "UNITED KINGDOM",
+            "enum": ["UNITED KINGDOM", "USA", "ITALY","GERMANY","FRANCE","AUSTRALIA","SPAIN","CANADA","MEXICO"],
+            "enumTitles": ["UNITED KINGDOM", "USA", "ITALY","GERMANY","FRANCE","AUSTRALIA","SPAIN","CANADA","MEXICO"]
+        }
+    }
+}
