@@ -66,13 +66,13 @@
             "properties": {
                 "minPrice": {
                     "title": "Min Price",
-                    "type": "number",
+                    "type": "integer",
                     "description": "Minimum price in local currency",
                     "minimum": 0
                 },
                 "maxPrice": {
                     "title": "Max Price",
-                    "type": "number",
+                    "type": "integer",
                     "description": "Maximum price in local currency",
                     "minimum": 0
                 },
