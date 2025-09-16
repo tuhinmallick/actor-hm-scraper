@@ -189,7 +189,6 @@
             "uniqueItems": true,
             "items": {
                 "type": "string",
-                "editor": "select",
                 "enum": [
                     "productId", "title", "description", "price", "originalPrice",
                     "salePrice", "currency", "colors", "sizes", "materials",
