@@ -17,14 +17,14 @@ export const isProductUrl = (url: string): boolean => {
 export const createRequestFromUrl = (url: string, country: any, userData?: any): Request => {
     const isProduct = isProductUrl(url);
     
-    return {
+    return new Request({
         url,
         userData: {
             label: isProduct ? 'PRODUCT_URL' : Labels.SUB_CATEGORY,
             country,
             ...userData,
         },
-    };
+    });
 };
 import { getMockStartUrls } from './debug.js';
 

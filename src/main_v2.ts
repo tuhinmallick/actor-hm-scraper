@@ -87,7 +87,7 @@ const urls: Request[] = [];
 
 // 1. Add direct URLs
 for (const url of startUrls) {
-    urls.push({
+    urls.push(new Request({
         url,
         userData: {
             label: Labels.SUB_CATEGORY,
@@ -95,7 +95,7 @@ for (const url of startUrls) {
             extractProductDetails,
             maxProducts,
         },
-    });
+    }));
 }
 
 // 2. Generate category URLs
@@ -108,7 +108,7 @@ for (const category of categories) {
         .applyFilters(filters)
         .applySort({ sort: sortBy });
     
-    urls.push({
+    urls.push(new Request({
         url: urlBuilder.build(),
         userData: {
             label: Labels.SUB_CATEGORY,
@@ -117,14 +117,14 @@ for (const category of categories) {
             maxProducts,
             category,
         },
-    });
+    }));
 }
 
 // 3. Generate search URLs
 for (const query of searchQueries) {
     const searchUrl = `${baseUrl}/search-results/_jcr_content/search.display.json?q=${encodeURIComponent(query)}`;
     
-    urls.push({
+    urls.push(new Request({
         url: searchUrl,
         userData: {
             label: Labels.SEARCH_RESULTS,
@@ -133,12 +133,12 @@ for (const query of searchQueries) {
             extractProductDetails,
             maxProducts,
         },
-    });
+    }));
 }
 
 // If no URLs provided, use default
 if (urls.length === 0) {
-    urls.push(...getStartUrls(false, countryConfig));
+    urls.push(...getStartUrls(false, countryConfig.code));
 }
 
 log.info(`Generated ${urls.length} start URLs`);
@@ -160,12 +160,14 @@ MemoryOptimizer.startMonitoring();
 let proxyConfiguration;
 if (input.proxyConfiguration) {
     try {
+        // Always use standard Apify proxy configuration for compatibility
+        proxyConfiguration = await Actor.createProxyConfiguration(input.proxyConfiguration);
+        log.info('Proxy configuration loaded');
+        
+        // If anti-bot is enabled, we can use enhanced proxy logic separately
         if (enableAntiBot) {
-            proxyConfiguration = await getEnhancedProxyConfiguration();
-            log.info('Enhanced proxy configuration loaded');
-        } else {
-            proxyConfiguration = await Actor.createProxyConfiguration(input.proxyConfiguration);
-            log.info('Standard proxy configuration loaded');
+            // Enhanced proxy logic can be handled within the anti-bot config
+            log.info('Anti-bot mode enabled with proxy configuration');
         }
     } catch (error: any) {
         log.warning('Proxy configuration failed:', error);
@@ -173,11 +175,13 @@ if (input.proxyConfiguration) {
 }
 
 // Configure concurrency
-concurrencyManager.updateProfile({
-    maxConcurrency,
-    desiredConcurrency: Math.min(maxConcurrency, 5),
-    minConcurrency: 1,
-});
+// concurrencyManager.updateProfile({
+//     maxConcurrency,
+//     desiredConcurrency: Math.min(maxConcurrency, 5),
+//     minConcurrency: 1,
+// });
+// Note: updateProfile method doesn't exist, use setConcurrency instead
+concurrencyManager.setConcurrency(Math.min(maxConcurrency, 5));
 
 // Configure crawler
 const crawlerConfig = enableAntiBot ? 
@@ -187,7 +191,7 @@ const crawlerConfig = enableAntiBot ?
         maxRequestsPerCrawl: maxProducts ? Math.max(maxProducts * 10, 1000) : undefined,
         maxRequestRetries: retryAttempts,
         requestHandlerTimeoutSecs: requestTimeout,
-        requestTimeoutSecs: requestTimeout,
+        // Note: removed requestTimeoutSecs as it doesn't exist in CheerioCrawlerOptions
     }) : {
         proxyConfiguration,
         requestHandler: router,

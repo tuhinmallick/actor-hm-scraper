@@ -71,4 +71,5 @@ export const Labels = {
     SUB_CATEGORY_COUNT: 'subCategoryCount',
     SUB_CATEGORY: 'subCategory',
     PRODUCT: 'product',
+    SEARCH_RESULTS: 'searchResults',
 };

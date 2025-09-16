@@ -170,7 +170,7 @@ export class ComprehensiveExtractor {
 
             return product;
         } catch (error) {
-            log.error('Error extracting product details:', error);
+            log.error('Error extracting product details:', error as any);
             return null;
         }
     }

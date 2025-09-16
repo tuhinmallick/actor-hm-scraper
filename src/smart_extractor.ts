@@ -100,7 +100,7 @@ export class SmartDataExtractor {
                 nextPageUrl: productData.nextPageUrl,
             };
         } catch (error) {
-            log.debug('NextJS extraction failed:', error);
+            log.debug('NextJS extraction failed:', error as any);
             return null;
         }
     }
@@ -138,7 +138,7 @@ export class SmartDataExtractor {
             }
             return null;
         } catch (error) {
-            log.debug('Window object extraction failed:', error);
+            log.debug('Window object extraction failed:', error as any);
             return null;
         }
     }
@@ -173,12 +173,12 @@ export class SmartDataExtractor {
                         };
                     }
                 } catch (e) {
-                    log.debug('Failed to parse JSON-LD:', e);
+                    log.debug('Failed to parse JSON-LD:', e as any);
                 }
             }
             return null;
         } catch (error) {
-            log.debug('JSON-LD extraction failed:', error);
+            log.debug('JSON-LD extraction failed:', error as any);
             return null;
         }
     }
@@ -233,7 +233,7 @@ export class SmartDataExtractor {
                 filters: {},
             };
         } catch (error) {
-            log.debug('Data attribute extraction failed:', error);
+            log.debug('Data attribute extraction failed:', error as any);
             return null;
         }
     }
@@ -307,7 +307,7 @@ export class SmartDataExtractor {
                     return result;
                 }
             } catch (error) {
-                log.debug(`Extraction method ${index + 1} failed:`, error);
+                log.debug(`Extraction method ${index + 1} failed:`, error as any);
             }
         }
 
