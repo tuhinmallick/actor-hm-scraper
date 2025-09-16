@@ -29,6 +29,7 @@
             "type": "string",
             "description": "Select H&M market to scrape from (40+ countries available)",
             "default": "en_us",
+            "editor": "select",
             "enum": [
                 "en_us", "en_gb", "de_de", "fr_fr", "es_es", "it_it", "nl_nl", "sv_se",
                 "da_dk", "no_no", "fi_fi", "de_at", "fr_be", "nl_be", "de_ch", "fr_ch",
@@ -149,8 +150,7 @@
             "type": "integer",
             "description": "Number of products per page (higher = faster)",
             "default": 72,
-            "minimum": 36,
-            "maximum": 128,
+            "editor": "select",
             "enum": [36, 72, 108, 128],
             "enumTitles": ["36 (Default)", "72 (Fast)", "108 (Faster)", "128 (Fastest)"]
         },
@@ -159,6 +159,7 @@
             "type": "string",
             "description": "How to sort products",
             "default": "stock",
+            "editor": "select",
             "enum": ["stock", "newProduct", "ascPrice", "descPrice"],
             "enumTitles": ["Relevance", "Newest First", "Price: Low to High", "Price: High to Low"]
         },
@@ -189,6 +190,7 @@
             "uniqueItems": true,
             "items": {
                 "type": "string",
+                "editor": "select",
                 "enum": [
                     "productId", "title", "description", "price", "originalPrice",
                     "salePrice", "currency", "colors", "sizes", "materials",
