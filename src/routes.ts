@@ -35,6 +35,12 @@ router.addHandler(Labels.NAVIGATION, async ({ request, json, log, crawler }) => 
     const { label, country } = request.userData;
     log.info(`${label}: Enqueueing divisions, country: ${country.name} - ${request.loadedUrl}`);
 
+    if (actorStatistics.hasReachedLimit()) {
+        log.info('Product limit already reached before NAVIGATION. Aborting crawl.');
+        await crawler.autoscaledPool?.abort();
+        return;
+    }
+
     const requests = getCategoriesFromNavigation(json, country);
     await crawler.addRequests(requests);
 });
@@ -48,6 +54,12 @@ router.addHandler(Labels.SUB_CATEGORY_COUNT, async ({ log, request, $, crawler }
     const { divisionName, categoryName, country, label } = request.userData;
     log.info(`${label}: country: ${country.name} - ${request.loadedUrl}`);
 
+    if (actorStatistics.hasReachedLimit()) {
+        log.info('Product limit reached before SUB_CATEGORY_COUNT. Skipping enqueue.');
+        await crawler.autoscaledPool?.abort();
+        return;
+    }
+
     const productCountText = getProductCount($);
     const productCountString = $(productCountText).text().trim().match(/\d+/g)
         ?.join('');
@@ -58,9 +70,12 @@ router.addHandler(Labels.SUB_CATEGORY_COUNT, async ({ log, request, $, crawler }
 
     const productCount = productCountString ?? DEFAULT_NUMBER_OF_PRODUCTS;
 
+    const remaining = actorStatistics.remainingToLimit();
+    const maxProductsToEnqueue = remaining === null ? productCount : Math.min(productCount as number, remaining);
+
     // Enqueue subcategory requests with pagination
     const requests = [];
-    for (let offset = 0; offset < productCount; offset += MAX_PRODUCTS_PER_PAGE) {
+    for (let offset = 0; offset < maxProductsToEnqueue; offset += MAX_PRODUCTS_PER_PAGE) {
         const url = new URL(request.loadedUrl as string);
         url.searchParams.set('offset', offset.toString());
         url.searchParams.set('page-size', MAX_PRODUCTS_PER_PAGE.toString());
@@ -79,16 +94,23 @@ router.addHandler(Labels.SUB_CATEGORY_COUNT, async ({ log, request, $, crawler }
     }
 
     await crawler.addRequests(requests);
-    log.info(`${label}: productCount: ${productCount} - ${request.loadedUrl}`);
+    log.info(`${label}: productCount: ${productCount} (enqueued up to ${maxProductsToEnqueue}) - ${request.loadedUrl}`);
 });
 
 /**
  * Subcategory page.
  * Enqueues all the products from given subcategory.
  */
-router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, enqueueLinks }) => {
+router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, enqueueLinks, crawler }) => {
     const { divisionName, categoryName, country, label } = request.userData;
     log.info(`${label}: country: ${country.name} - ${request.loadedUrl}`);
+    if (actorStatistics.hasReachedLimit()) {
+        log.info('Product limit reached before SUB_CATEGORY. Skipping product links.');
+        await crawler.autoscaledPool?.abort();
+        return;
+    }
+
+    let remaining = actorStatistics.remainingToLimit();
     await enqueueLinks({
         selector: '.product-item article .item-heading a',
         userData: {
@@ -98,6 +120,10 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, enqueueLinks }) =>
             country,
         },
         transformRequestFunction: (requestToEnqueue) => {
+            if (remaining !== null) {
+                if (remaining <= 0) return null;
+                remaining -= 1;
+            }
             // Last two digits of product id are given by it's color
             // Removing this parameter, so we do not enqueue product combination twice
             const baseProductId = getBaseProductId(requestToEnqueue.url);
