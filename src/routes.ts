@@ -136,6 +136,12 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
     const combinationInfo = getCombinationsInfoFromProductObject(productObject);
     const combinationImages = getAllCombinationImages($);
 
+    // Check if we've already reached the limit before processing this product
+    if (actorStatistics.hasReachedLimit()) {
+        log.info('Product limit reached. Skipping remaining products.');
+        return;
+    }
+
     const remaining = actorStatistics.remainingToLimit();
     const sliceTo = remaining === null ? combinationInfo.length : remaining;
     const products = combinationInfo
