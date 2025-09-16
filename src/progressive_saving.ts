@@ -63,7 +63,7 @@ export class ProgressiveDataSaver {
             }
             
             return true;
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error adding product to buffer:', error);
             return false;
         }
@@ -107,7 +107,7 @@ export class ProgressiveDataSaver {
             
             log.info(`Saved ${productsToSave.length} products to dataset (total: ${this.totalSaved})`);
             
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error saving buffer to dataset:', error);
             
             // Retry with exponential backoff
@@ -136,7 +136,7 @@ export class ProgressiveDataSaver {
                 log.info(`Retry save successful: ${this.buffer.length} products saved`);
                 return;
                 
-            } catch (error) {
+            } catch (error: any) {
                 log.error(`Retry attempt ${attempt} failed:`, error);
                 
                 if (attempt === this.config.maxRetries) {
@@ -229,7 +229,7 @@ export const saveProductsOptimized = async (products: ProductData[]): Promise<vo
         
         log.info(`Successfully saved ${products.length} products`);
         
-    } catch (error) {
+    } catch (error: any) {
         log.error('Error saving products:', error);
         throw error;
     }
@@ -250,7 +250,7 @@ export class DataPersistence {
                 ...state,
                 timestamp: new Date().toISOString(),
             });
-        } catch (error) {
+        } catch (error: any) {
             log.warning('Could not save persistence state:', error);
         }
     }
@@ -262,7 +262,7 @@ export class DataPersistence {
         try {
             const state = await Actor.getValue(this.PERSISTENCE_KEY);
             return state;
-        } catch (error) {
+        } catch (error: any) {
             log.warning('Could not load persistence state:', error);
             return null;
         }
@@ -274,7 +274,7 @@ export class DataPersistence {
     static async clearState(): Promise<void> {
         try {
             await Actor.setValue(this.PERSISTENCE_KEY, null);
-        } catch (error) {
+        } catch (error: any) {
             log.warning('Could not clear persistence state:', error);
         }
     }
@@ -334,7 +334,7 @@ export class DataQualityMonitor {
     /**
      * Record product quality
      */
-    static recordProduct(product: ProductData, isValid: boolean, qualityScore: number): void {
+    static recordProduct(_product: ProductData, isValid: boolean, qualityScore: number): void {
         this.qualityMetrics.totalProcessed++;
         
         if (isValid) {
@@ -352,7 +352,7 @@ export class DataQualityMonitor {
     /**
      * Get quality metrics
      */
-    static getMetrics(): typeof this.qualityMetrics {
+    static getMetrics() {
         return { ...this.qualityMetrics };
     }
     
