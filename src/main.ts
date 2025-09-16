@@ -11,8 +11,10 @@ interface InputSchema {
     debug?: boolean,
     useMockRequests?: boolean,
     inputCountry?: string,
+    maxItems?: number,
+    maxRunSeconds?: number,
 }
-const { inputCountry } = (await Actor.getInput<InputSchema>())
+const { inputCountry, maxItems, maxRunSeconds } = (await Actor.getInput<InputSchema>())
 ?? {
     inputCountry: 'UNITED KINGDOM',
 };
@@ -41,6 +43,19 @@ const crawler = new CheerioCrawler({
         actorStatistics.saveError(context.request.url, error.toString());
     },
 });
+
+actorStatistics.setLimit(maxItems);
+
+if (typeof maxRunSeconds === 'number' && maxRunSeconds > 0) {
+    setTimeout(async () => {
+        log.info(`Max run time reached (${maxRunSeconds}s). Aborting crawl.`);
+        try {
+            await crawler.pause();
+        } finally {
+            await Actor.exit();
+        }
+    }, maxRunSeconds * 1000);
+}
 
 await crawler.run(startUrls);
 

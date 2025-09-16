@@ -10,12 +10,14 @@ interface PersistedStatistics {
 class ActorStatistics {
     private errors: Record<string, string[]>;
     private saved;
+    private limit?: number;
     private readonly kvKey;
     private readonly logPeriod;
 
     constructor() {
         this.errors = {};
         this.saved = 0;
+        this.limit = undefined;
         this.kvKey = STATISTICS_KEY;
         this.logPeriod = LOGGING_PERIOD;
     }
@@ -59,6 +61,29 @@ class ActorStatistics {
 
     incrementCounter(count: number) {
         this.saved += count;
+    }
+
+    setLimit(limit: number | undefined) {
+        if (typeof limit === 'number' && limit > 0) {
+            this.limit = limit;
+        } else {
+            this.limit = undefined;
+        }
+    }
+
+    getSavedCount() {
+        return this.saved;
+    }
+
+    hasReachedLimit() {
+        if (typeof this.limit !== 'number') return false;
+        return this.saved >= this.limit;
+    }
+
+    remainingToLimit() {
+        if (typeof this.limit !== 'number') return Number.POSITIVE_INFINITY;
+        const remaining = this.limit - this.saved;
+        return remaining > 0 ? remaining : 0;
     }
 
     logStatistics() {

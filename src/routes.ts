@@ -112,7 +112,7 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, enqueueLinks }) =>
  * Saves product details to dataset.
  * Enqueues other combinations of this product
  */
-router.addHandler(Labels.PRODUCT, async ({ log, request, $, body }) => {
+router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => {
     const { divisionName, categoryName, country, label } = request.userData;
     log.info(`${label}: country: ${country.name} - ${request.loadedUrl}`);
 
@@ -136,7 +136,10 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body }) => {
     const combinationInfo = getCombinationsInfoFromProductObject(productObject);
     const combinationImages = getAllCombinationImages($);
 
-    const products = combinationInfo.map((combination) => {
+    const remaining = actorStatistics.remainingToLimit();
+    const products = combinationInfo
+        .slice(0, Number.isFinite(remaining) ? remaining as number : combinationInfo.length)
+        .map((combination) => {
         const {
             listPrice,
             salePrice,
@@ -175,6 +178,14 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body }) => {
         };
     });
 
-    await Actor.pushData(products);
-    actorStatistics.incrementCounter(products.length);
+    const filtered = products.filter(Boolean);
+    if (filtered.length > 0) {
+        await Actor.pushData(filtered);
+        actorStatistics.incrementCounter(filtered.length);
+    }
+
+    if (actorStatistics.hasReachedLimit()) {
+        log.info('Product limit reached. Aborting crawl.');
+        await crawler.pause();
+    }
 });
