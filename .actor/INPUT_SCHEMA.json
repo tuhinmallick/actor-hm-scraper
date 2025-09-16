@@ -150,9 +150,8 @@
             "type": "integer",
             "description": "Number of products per page (higher = faster)",
             "default": 72,
-            "editor": "select",
-            "enum": [36, 72, 108, 128],
-            "enumTitles": ["36 (Default)", "72 (Fast)", "108 (Faster)", "128 (Fastest)"]
+            "minimum": 1,
+            "maximum": 200
         },
         "sortBy": {
             "title": "Sort Products By",
