@@ -3,7 +3,7 @@ import { CheerioCrawler, log, LogLevel } from 'crawlee';
 import { router } from './routes.js';
 import { getStartUrls } from './tools.js';
 import actorStatistics from './actor_statistics.js';
-import { CONCURRENCY } from './constants.js';
+// import { CONCURRENCY } from './constants.js'; // Unused - concurrency managed by concurrencyManager
 import { getAntiBotCrawlerConfig, smartScheduler } from './anti_bot.js';
 import { concurrencyManager } from './concurrency_manager.js';
 import { advancedSessionManager } from './advanced_stealth.js';
@@ -11,8 +11,7 @@ import { behavioralSimulator } from './behavioral_simulation.js';
 import { stealthMode } from './stealth_mode.js';
 import { javaScriptRenderer } from './javascript_renderer.js';
 import { createEnhancedErrorHandler, retryWithBackoff } from './error_handling.js';
-import { progressiveDataSaver, MemoryOptimizer, DataQualityMonitor } from './progressive_saving.js';
-import { DataPersistence } from './progressive_saving.js';
+import { progressiveDataSaver, MemoryOptimizer, DataQualityMonitor, DataPersistence } from './progressive_saving.js';
 import { getEnhancedProxyConfiguration } from './proxy_manager.js';
 
 interface InputSchema {
@@ -27,11 +26,11 @@ interface InputSchema {
     minQualityScore?: number,
     enableMemoryOptimization?: boolean,
 }
-const { 
-    inputCountry, 
-    maxItems, 
-    maxRunSeconds, 
-    debug: inputDebug, 
+const {
+    inputCountry,
+    maxItems,
+    maxRunSeconds,
+    debug: inputDebug,
     useMockRequests,
     enableAntiBot = true,
     enableProgressiveSaving = true,
@@ -65,8 +64,8 @@ log.info('Starting enhanced HM.com scraper with best practices', {
 
 // Initialize progressive data saver
 if (enableProgressiveSaving) {
-    progressiveDataSaver['config'] = {
-        ...progressiveDataSaver['config'],
+    progressiveDataSaver.config = {
+        ...progressiveDataSaver.config,
         batchSize,
         minQualityScore,
     };
@@ -101,13 +100,13 @@ let proxyConfiguration;
 try {
     proxyConfiguration = await retryWithBackoff(
         () => Actor.createProxyConfiguration(),
-        { 
-            maxRetries: 3, 
+        {
+            maxRetries: 3,
             baseDelay: 1000,
             maxDelay: 30000,
             backoffMultiplier: 2,
-            retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
-        }
+            retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
+        },
     );
     log.info('Standard proxy configuration loaded successfully');
 } catch (error: any) {
@@ -136,54 +135,54 @@ actorStatistics.setLimit(maxItems);
 if (typeof maxRunSeconds === 'number' && maxRunSeconds > 0) {
     setTimeout(async () => {
         log.info(`Max run time reached (${maxRunSeconds}s). Initiating graceful shutdown.`);
-        
+
         try {
             // Save any remaining data
             if (enableProgressiveSaving) {
                 await progressiveDataSaver.forceSave();
             }
-            
+
             // Log final statistics
             actorStatistics.logStatistics();
             DataQualityMonitor.logQualityReport();
-            
+
             // Log scheduler statistics
             const schedulerStats = smartScheduler.getStats();
             log.info('Final scheduler statistics:', schedulerStats);
-            
+
             // Log advanced session statistics
             const sessionStats = advancedSessionManager.getStats();
             log.info('Final advanced session statistics:', sessionStats);
-            
+
             // Log behavioral simulation statistics
             const behavioralStats = behavioralSimulator.getStats();
             log.info('Final behavioral simulation statistics:', behavioralStats);
-            
+
             // Log concurrency management statistics
             const concurrencyStats = concurrencyManager.getStats();
             log.info('Final concurrency management statistics:', concurrencyStats);
-            
+
             // Log proxy statistics
             if (enhancedProxyConfig) {
                 const proxyStats = enhancedProxyConfig.getStats();
                 log.info('Final proxy statistics:', proxyStats);
             }
-            
+
             // Log stealth mode statistics
             const stealthStats = stealthMode.getStealthConfig();
             log.info('Final stealth mode statistics:', stealthStats);
-            
+
             // Log JavaScript renderer statistics
             const rendererStats = javaScriptRenderer.getPerformanceMetrics();
             log.info('Final JavaScript renderer statistics:', Object.fromEntries(rendererStats));
-            
+
             // Save final state
             await DataPersistence.saveState({
                 totalSaved: actorStatistics.getSavedCount(),
                 qualityMetrics: DataQualityMonitor.getMetrics(),
                 timestamp: new Date().toISOString(),
             });
-            
+
             // Graceful shutdown
             await crawler.autoscaledPool?.abort();
         } catch (error: any) {
@@ -197,7 +196,7 @@ if (typeof maxRunSeconds === 'number' && maxRunSeconds > 0) {
 // Enhanced startup sequence
 try {
     log.info('Starting crawler with enhanced configuration');
-    
+
     // Save startup state
     await DataPersistence.saveState({
         startTime: new Date().toISOString(),
@@ -208,23 +207,22 @@ try {
             enableProgressiveSaving,
         },
     });
-    
+
     // Start crawling with retry mechanism
     await retryWithBackoff(
         () => crawler.run(startUrls),
-        { 
-            maxRetries: 2, 
+        {
+            maxRetries: 2,
             baseDelay: 5000,
             maxDelay: 30000,
             backoffMultiplier: 2,
-            retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
+            retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
         },
-        'crawler startup'
+        'crawler startup',
     );
-    
 } catch (error: any) {
     log.error('Crawler failed to start:', error);
-    
+
     // Attempt recovery
     try {
         log.info('Attempting recovery...');
@@ -237,52 +235,52 @@ try {
     } catch (recoveryError: any) {
         log.error('Recovery failed:', recoveryError);
     }
-    
+
     throw error;
 } finally {
     // Final cleanup and statistics
     try {
         log.info('Performing final cleanup...');
-        
+
         // Save any remaining data
         if (enableProgressiveSaving) {
             await progressiveDataSaver.cleanup();
         }
-        
+
         // Log final statistics
         actorStatistics.logStatistics();
         DataQualityMonitor.logQualityReport();
-        
+
         // Log scheduler statistics
         const schedulerStats = smartScheduler.getStats();
         log.info('Final scheduler statistics:', schedulerStats);
-        
+
         // Log advanced session statistics
         const sessionStats = advancedSessionManager.getStats();
         log.info('Final advanced session statistics:', sessionStats);
-        
+
         // Log behavioral simulation statistics
         const behavioralStats = behavioralSimulator.getStats();
         log.info('Final behavioral simulation statistics:', behavioralStats);
-        
+
         // Log concurrency management statistics
         const concurrencyStats = concurrencyManager.getStats();
         log.info('Final concurrency management statistics:', concurrencyStats);
-        
+
         // Log proxy statistics
         if (enhancedProxyConfig) {
             const proxyStats = enhancedProxyConfig.getStats();
             log.info('Final proxy statistics:', proxyStats);
         }
-        
+
         // Log stealth mode statistics
         const stealthStats = stealthMode.getStealthConfig();
         log.info('Final stealth mode statistics:', stealthStats);
-        
+
         // Log JavaScript renderer statistics
         const rendererStats = javaScriptRenderer.getPerformanceMetrics();
         log.info('Final JavaScript renderer statistics:', Object.fromEntries(rendererStats));
-        
+
         // Save final state
         await DataPersistence.saveState({
             endTime: new Date().toISOString(),
@@ -292,9 +290,8 @@ try {
                 progressiveSaverStats: progressiveDataSaver.getStats(),
             },
         });
-        
+
         log.info('Scraping completed successfully');
-        
     } catch (cleanupError: any) {
         log.error('Error during final cleanup:', cleanupError);
     }

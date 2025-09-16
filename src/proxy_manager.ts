@@ -70,7 +70,7 @@ class ProxyManager {
      */
     getBestProxy(): string | null {
         const healthyProxies = Array.from(this.proxies.values())
-            .filter(proxy => proxy.isHealthy && !this.blockedProxies.has(proxy.id))
+            .filter((proxy) => proxy.isHealthy && !this.blockedProxies.has(proxy.id))
             .sort((a, b) => {
                 // Sort by success rate (higher is better)
                 const aSuccessRate = a.successCount / (a.successCount + a.failureCount + 1);
@@ -86,9 +86,10 @@ class ProxyManager {
         const selectedProxy = healthyProxies[0];
         this.currentProxyId = selectedProxy.id;
         selectedProxy.lastUsed = Date.now();
-        
-        log.debug(`Selected proxy: ${selectedProxy.id} (success rate: ${(selectedProxy.successCount / (selectedProxy.successCount + selectedProxy.failureCount + 1) * 100).toFixed(1)}%)`);
-        
+
+        const successRate = ((selectedProxy.successCount / (selectedProxy.successCount + selectedProxy.failureCount + 1)) * 100).toFixed(1);
+        log.debug(`Selected proxy: ${selectedProxy.id} (success rate: ${successRate}%)`);
+
         return selectedProxy.url;
     }
 
@@ -115,16 +116,16 @@ class ProxyManager {
             if (proxy) {
                 proxy.failureCount++;
                 proxy.lastFailure = Date.now();
-                
+
                 log.warning(`Proxy ${this.currentProxyId} failure recorded (total: ${proxy.failureCount})`);
-                
+
                 // Check if proxy should be marked as unhealthy
                 if (proxy.failureCount >= this.maxFailuresPerProxy) {
                     proxy.isHealthy = false;
                     this.blockedProxies.add(this.currentProxyId);
                     log.error(`Proxy ${this.currentProxyId} marked as unhealthy due to ${proxy.failureCount} failures`);
                 }
-                
+
                 // Check for domain-specific blocking
                 if (error?.message?.includes('403') || error?.message?.includes('blocked')) {
                     const domain = this.extractDomainFromError(error);
@@ -143,10 +144,10 @@ class ProxyManager {
     rotateProxy(): string | null {
         this.proxyRotationCount++;
         log.info(`Rotating proxy (rotation #${this.proxyRotationCount})`);
-        
+
         // Reset current proxy
         this.currentProxyId = null;
-        
+
         // Get next best proxy
         return this.getBestProxy();
     }
@@ -156,20 +157,20 @@ class ProxyManager {
      */
     shouldRotateProxy(): boolean {
         if (!this.currentProxyId) return true;
-        
+
         const proxy = this.proxies.get(this.currentProxyId);
         if (!proxy) return true;
-        
+
         // Rotate if proxy has too many failures
         if (proxy.failureCount >= this.maxFailuresPerProxy) return true;
-        
+
         // Rotate if proxy has been used for too long
         const timeSinceLastUse = Date.now() - proxy.lastUsed;
         if (timeSinceLastUse > 1800000) return true; // 30 minutes
-        
+
         // Rotate periodically for stealth
         if (this.proxyRotationCount > 0 && this.proxyRotationCount % 10 === 0) return true;
-        
+
         return false;
     }
 
@@ -196,7 +197,7 @@ class ProxyManager {
      */
     private performHealthCheck(): void {
         const now = Date.now();
-        
+
         for (const [id, proxy] of this.proxies) {
             // Check if proxy should be unblocked
             if (this.blockedProxies.has(id)) {
@@ -208,7 +209,7 @@ class ProxyManager {
                     log.info(`Proxy ${id} unblocked after cooldown period`);
                 }
             }
-            
+
             // Reset success/failure counts periodically
             if (now - proxy.lastUsed > 3600000) { // 1 hour
                 proxy.successCount = Math.max(0, proxy.successCount - 1);
@@ -222,16 +223,16 @@ class ProxyManager {
      */
     getStats() {
         const totalProxies = this.proxies.size;
-        const healthyProxies = Array.from(this.proxies.values()).filter(p => p.isHealthy).length;
+        const healthyProxies = Array.from(this.proxies.values()).filter((p) => p.isHealthy).length;
         const blockedProxies = this.blockedProxies.size;
-        
+
         return {
             totalProxies,
             healthyProxies,
             blockedProxies,
             currentProxy: this.currentProxyId,
             rotationCount: this.proxyRotationCount,
-            proxyDetails: Array.from(this.proxies.values()).map(p => ({
+            proxyDetails: Array.from(this.proxies.values()).map((p) => ({
                 id: p.id,
                 successCount: p.successCount,
                 failureCount: p.failureCount,
@@ -259,7 +260,7 @@ export const proxyManager = new ProxyManager();
  */
 export const getEnhancedProxyConfiguration = async () => {
     await proxyManager.initialize();
-    
+
     // Return the proxy configuration with rotation logic
     return {
         getProxyUrl: () => proxyManager.getBestProxy(),

@@ -136,14 +136,14 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
         // Enhanced product info extraction with error handling
         const productInfo = await retryWithBackoff(
             async () => getProductInfo($, body as string),
-            { 
-                maxRetries: 2, 
+            {
+                maxRetries: 2,
                 baseDelay: 1000,
                 maxDelay: 30000,
                 backoffMultiplier: 2,
-                retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
+                retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
             },
-            'product info extraction'
+            'product info extraction',
         );
 
         const {
@@ -163,14 +163,14 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
         // Enhanced product object extraction with retry
         const productObject = await retryWithBackoff(
             async () => getProductInfoObject(body as string),
-            { 
-                maxRetries: 2, 
+            {
+                maxRetries: 2,
                 baseDelay: 1000,
                 maxDelay: 30000,
                 backoffMultiplier: 2,
-                retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
+                retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
             },
-            'product object extraction'
+            'product object extraction',
         );
 
         const combinationInfo = getCombinationsInfoFromProductObject(productObject as any);
@@ -184,7 +184,7 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
 
         const remaining = actorStatistics.remainingToLimit();
         const sliceTo = remaining === null ? combinationInfo.length : remaining;
-        
+
         // Process products with enhanced quality monitoring
         let savedCount = 0;
         for (const combination of combinationInfo.slice(0, sliceTo)) {
@@ -241,7 +241,7 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
             if (saved) {
                 savedCount++;
                 actorStatistics.incrementCounter(1);
-                
+
                 log.debug(`Saved product: ${cleanedProduct.productName} (${cleanedProduct.articleNo}) - Quality: ${qualityScore}`);
             }
 
@@ -253,7 +253,7 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
         }
 
         log.info(`Processed ${savedCount} products from ${request.loadedUrl}`);
-        
+
         // Record success in scheduler for adaptive behavior
         smartScheduler.recordSuccess();
 
@@ -261,13 +261,12 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
             log.info('Product limit reached. Aborting crawl.');
             await crawler.autoscaledPool?.abort();
         }
-
     } catch (error: any) {
         const classifiedError = classifyError(error);
-        
+
         // Record failure in scheduler for adaptive behavior
         smartScheduler.recordFailure();
-        
+
         log.error(`Error processing product page ${request.loadedUrl}:`, {
             error: classifiedError.message,
             type: classifiedError.type,

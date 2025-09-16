@@ -66,7 +66,7 @@ export const VALIDATION_RULES = {
  */
 export const cleanText = (text: string): string => {
     if (!text || typeof text !== 'string') return '';
-    
+
     return text
         .trim()
         .replace(/\s+/g, ' ') // Replace multiple spaces with single space
@@ -82,18 +82,18 @@ export const cleanPrice = (price: string | number): number | null => {
     if (typeof price === 'number') {
         return price > 0 ? Math.round(price * 100) / 100 : null;
     }
-    
+
     if (!price || typeof price !== 'string') return null;
-    
+
     // Extract numeric value from price string
     const numericMatch = price.replace(/[^\d.,]/g, '').match(/(\d+)[.,]?(\d*)/);
     if (!numericMatch) return null;
-    
+
     const integerPart = parseInt(numericMatch[1], 10);
     const decimalPart = numericMatch[2] ? parseInt(numericMatch[2], 10) : 0;
     const decimalPlaces = numericMatch[2] ? numericMatch[2].length : 0;
-    
-    const priceValue = integerPart + (decimalPart / Math.pow(10, decimalPlaces));
+
+    const priceValue = integerPart + (decimalPart / 10 ** decimalPlaces);
     return priceValue > 0 ? Math.round(priceValue * 100) / 100 : null;
 };
 
@@ -102,13 +102,13 @@ export const cleanPrice = (price: string | number): number | null => {
  */
 export const cleanUrl = (url: string): string => {
     if (!url || typeof url !== 'string') return '';
-    
+
     try {
         const urlObj = new URL(url);
         // Remove tracking parameters
         const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid'];
-        trackingParams.forEach(param => urlObj.searchParams.delete(param));
-        
+        trackingParams.forEach((param) => urlObj.searchParams.delete(param));
+
         return urlObj.toString();
     } catch (error: any) {
         log.warning(`Invalid URL: ${url}`, error);
@@ -121,15 +121,15 @@ export const cleanUrl = (url: string): string => {
  */
 export const cleanImageUrl = (imageUrl: string): string => {
     if (!imageUrl || typeof imageUrl !== 'string') return '';
-    
+
     try {
         // Ensure HTTPS
         if (imageUrl.startsWith('//')) {
-            imageUrl = 'https:' + imageUrl;
+            imageUrl = `https:${imageUrl}`;
         } else if (imageUrl.startsWith('/')) {
-            imageUrl = 'https://www2.hm.com' + imageUrl;
+            imageUrl = `https://www2.hm.com${imageUrl}`;
         }
-        
+
         const urlObj = new URL(imageUrl);
         return urlObj.toString();
     } catch (error: any) {
@@ -143,7 +143,7 @@ export const cleanImageUrl = (imageUrl: string): string => {
  */
 export const validateProductData = (product: Partial<ProductData>): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
-    
+
     // Validate product name
     if (VALIDATION_RULES.productName.required && !product.productName) {
         errors.push('Product name is required');
@@ -156,7 +156,7 @@ export const validateProductData = (product: Partial<ProductData>): { isValid: b
             errors.push(`Product name too long (max: ${VALIDATION_RULES.productName.maxLength})`);
         }
     }
-    
+
     // Validate article number
     if (VALIDATION_RULES.articleNo.required && !product.articleNo) {
         errors.push('Article number is required');
@@ -165,7 +165,7 @@ export const validateProductData = (product: Partial<ProductData>): { isValid: b
             errors.push(`Article number out of range (${VALIDATION_RULES.articleNo.min}-${VALIDATION_RULES.articleNo.max})`);
         }
     }
-    
+
     // Validate list price
     if (VALIDATION_RULES.listPrice.required && !product.listPrice) {
         errors.push('List price is required');
@@ -174,12 +174,12 @@ export const validateProductData = (product: Partial<ProductData>): { isValid: b
             errors.push(`List price out of range (${VALIDATION_RULES.listPrice.min}-${VALIDATION_RULES.listPrice.max})`);
         }
     }
-    
+
     // Validate sale price
     if (product.salePrice && (product.salePrice < VALIDATION_RULES.salePrice.min || product.salePrice > VALIDATION_RULES.salePrice.max)) {
         errors.push(`Sale price out of range (${VALIDATION_RULES.salePrice.min}-${VALIDATION_RULES.salePrice.max})`);
     }
-    
+
     // Validate description
     if (VALIDATION_RULES.description.required && !product.description) {
         errors.push('Description is required');
@@ -192,21 +192,21 @@ export const validateProductData = (product: Partial<ProductData>): { isValid: b
             errors.push(`Description too long (max: ${VALIDATION_RULES.description.maxLength})`);
         }
     }
-    
+
     // Validate URL
     if (VALIDATION_RULES.url.required && !product.url) {
         errors.push('URL is required');
     } else if (product.url && !VALIDATION_RULES.url.pattern.test(product.url)) {
         errors.push('Invalid URL format');
     }
-    
+
     // Validate image URL
     if (VALIDATION_RULES.imageUrl.required && !product.imageUrl) {
         errors.push('Image URL is required');
     } else if (product.imageUrl && !VALIDATION_RULES.imageUrl.pattern.test(product.imageUrl)) {
         errors.push('Invalid image URL format');
     }
-    
+
     return {
         isValid: errors.length === 0,
         errors,
@@ -235,10 +235,10 @@ export const cleanAndValidateProduct = (rawProduct: any): ProductData | null => 
             imageUrl: cleanImageUrl(rawProduct.imageUrl || ''),
             timestamp: rawProduct.timestamp || new Date().toISOString(),
         };
-        
+
         // Validate cleaned data
         const validation = validateProductData(cleanedProduct);
-        
+
         if (!validation.isValid) {
             log.warning(`Product validation failed: ${validation.errors.join(', ')}`, {
                 productName: cleanedProduct.productName,
@@ -246,7 +246,7 @@ export const cleanAndValidateProduct = (rawProduct: any): ProductData | null => 
             });
             return null;
         }
-        
+
         return cleanedProduct;
     } catch (error: any) {
         log.error('Error cleaning product data:', error);
@@ -260,7 +260,7 @@ export const cleanAndValidateProduct = (rawProduct: any): ProductData | null => 
 export const deduplicateProducts = (products: ProductData[]): ProductData[] => {
     const seen = new Set<string>();
     const unique: ProductData[] = [];
-    
+
     for (const product of products) {
         const key = `${product.articleNo}_${product.country}`;
         if (!seen.has(key)) {
@@ -268,7 +268,7 @@ export const deduplicateProducts = (products: ProductData[]): ProductData[] => {
             unique.push(product);
         }
     }
-    
+
     return unique;
 };
 
@@ -278,35 +278,35 @@ export const deduplicateProducts = (products: ProductData[]): ProductData[] => {
 export const calculateProductQualityScore = (product: ProductData): number => {
     let score = 0;
     const maxScore = 100;
-    
+
     // Product name quality (20 points)
     if (product.productName && product.productName.length > 10) score += 20;
     else if (product.productName && product.productName.length > 5) score += 10;
-    
+
     // Description quality (20 points)
     if (product.description && product.description.length > 50) score += 20;
     else if (product.description && product.description.length > 20) score += 10;
-    
+
     // Price information (20 points)
     if (product.listPrice > 0) score += 15;
     if (product.salePrice && product.salePrice > 0) score += 5;
-    
+
     // Image availability (20 points)
     if (product.imageUrl && product.imageUrl.includes('hm.com')) score += 20;
     else if (product.imageUrl) score += 10;
-    
+
     // URL validity (10 points)
     if (product.url && product.url.includes('hm.com')) score += 10;
-    
+
     // Article number validity (10 points)
     if (product.articleNo && product.articleNo > 100000) score += 10;
-    
+
     return Math.min(score, maxScore);
 };
 
 /**
  * Filter products by quality score
  */
-export const filterByQuality = (products: ProductData[], minScore: number = 70): ProductData[] => {
-    return products.filter(product => calculateProductQualityScore(product) >= minScore);
+export const filterByQuality = (products: ProductData[], minScore = 70): ProductData[] => {
+    return products.filter((product) => calculateProductQualityScore(product) >= minScore);
 };

@@ -45,21 +45,21 @@ class AdvancedConcurrencyManager {
     private performanceMetrics: PerformanceMetrics;
     private adaptiveConfig: AdaptiveConfig;
     private scalingHistory: ScalingEvent[] = [];
-    private lastScaleTime: number = 0;
-    private burstModeActive: boolean = false;
-    private cooldownModeActive: boolean = false;
-    private errorStreak: number = 0;
-    private successStreak: number = 0;
-    
+    private lastScaleTime = 0;
+    private burstModeActive = false;
+    private cooldownModeActive = false;
+    private errorStreak = 0;
+    private successStreak = 0;
+
     constructor() {
         this.currentProfile = this.getDefaultProfile();
         this.performanceMetrics = this.initializeMetrics();
         this.adaptiveConfig = this.getDefaultAdaptiveConfig();
-        
+
         // Start performance monitoring
         this.startPerformanceMonitoring();
     }
-    
+
     private getDefaultProfile(): ConcurrencyProfile {
         return {
             name: 'balanced',
@@ -71,10 +71,10 @@ class AdvancedConcurrencyManager {
             scaleUpThreshold: 0.85, // High success rate required
             scaleDownThreshold: 0.7, // Scale down on moderate issues
             burstLimit: 12, // Temporary burst limit
-            cooldownPeriod: 30000 // 30 seconds cooldown
+            cooldownPeriod: 30000, // 30 seconds cooldown
         };
     }
-    
+
     private initializeMetrics(): PerformanceMetrics {
         return {
             requestsPerSecond: 0,
@@ -85,10 +85,10 @@ class AdvancedConcurrencyManager {
             memoryUsage: 0,
             cpuUsage: 0,
             queueLength: 0,
-            activeRequests: 0
+            activeRequests: 0,
         };
     }
-    
+
     private getDefaultAdaptiveConfig(): AdaptiveConfig {
         return {
             enableAdaptiveScaling: true,
@@ -97,67 +97,66 @@ class AdvancedConcurrencyManager {
             enableMemoryOptimization: true,
             enableErrorBasedScaling: true,
             enableTimeBasedScaling: true,
-            enableResourceBasedScaling: true
+            enableResourceBasedScaling: true,
         };
     }
-    
+
     /**
      * Get optimal concurrency configuration based on current conditions
      */
     getOptimalConcurrency(): ConcurrencyProfile {
         this.updatePerformanceMetrics();
-        
+
         if (this.adaptiveConfig.enableAdaptiveScaling) {
             this.performAdaptiveScaling();
         }
-        
+
         return { ...this.currentProfile };
     }
-    
+
     private updatePerformanceMetrics(): void {
         // This would be implemented with actual performance monitoring
         // For now, we'll simulate realistic metrics
-        
+
         const now = Date.now();
         const timeSinceLastUpdate = now - (this.lastScaleTime || now);
-        
+
         // Simulate performance degradation over time
         if (timeSinceLastUpdate > 60000) { // 1 minute
             this.performanceMetrics.successRate *= 0.99; // Gradual degradation
             this.performanceMetrics.averageResponseTime *= 1.01; // Slight increase
         }
-        
+
         // Update based on recent scaling events
-        const recentErrors = this.scalingHistory.filter(e => 
-            e.type === 'error' && now - e.timestamp < 30000
+        const recentErrors = this.scalingHistory.filter((e) => e.type === 'error' && now - e.timestamp < 30000,
         ).length;
-        
+
         if (recentErrors > 2) {
             this.performanceMetrics.errorRate = Math.min(this.performanceMetrics.errorRate + 0.1, 1.0);
             this.performanceMetrics.successRate = Math.max(this.performanceMetrics.successRate - 0.1, 0.0);
         }
     }
-    
+
     private performAdaptiveScaling(): void {
         const now = Date.now();
-        
+
         // Prevent too frequent scaling
         if (now - this.lastScaleTime < 10000) { // 10 seconds minimum
             return;
         }
-        
+
         // Check for burst mode conditions
         if (this.adaptiveConfig.enableBurstMode && this.shouldEnterBurstMode()) {
             this.enterBurstMode();
             return;
         }
-        
+
         // Check for cooldown mode conditions
         if (this.adaptiveConfig.enableCooldownMode && this.shouldEnterCooldownMode()) {
             this.enterCooldownMode();
             return;
         }
-        
+
         // Normal adaptive scaling
         if (this.shouldScaleUp()) {
             this.scaleUp();
@@ -165,144 +164,144 @@ class AdvancedConcurrencyManager {
             this.scaleDown();
         }
     }
-    
+
     private shouldEnterBurstMode(): boolean {
         return (
-            this.performanceMetrics.successRate > 0.95 &&
-            this.performanceMetrics.averageResponseTime < 1500 &&
-            this.performanceMetrics.errorRate < 0.02 &&
-            !this.burstModeActive &&
-            this.currentProfile.desiredConcurrency < this.currentProfile.burstLimit
+            this.performanceMetrics.successRate > 0.95
+            && this.performanceMetrics.averageResponseTime < 1500
+            && this.performanceMetrics.errorRate < 0.02
+            && !this.burstModeActive
+            && this.currentProfile.desiredConcurrency < this.currentProfile.burstLimit
         );
     }
-    
+
     private enterBurstMode(): void {
         this.burstModeActive = true;
         this.currentProfile.desiredConcurrency = Math.min(
             this.currentProfile.desiredConcurrency + 2,
-            this.currentProfile.burstLimit
+            this.currentProfile.burstLimit,
         );
-        
+
         this.recordScalingEvent('burst_mode', 'entered');
         log.info(`Entered burst mode: concurrency increased to ${this.currentProfile.desiredConcurrency}`);
-        
+
         // Auto-exit burst mode after 2 minutes
         setTimeout(() => {
             this.exitBurstMode();
         }, 120000);
     }
-    
+
     private exitBurstMode(): void {
         this.burstModeActive = false;
         this.currentProfile.desiredConcurrency = Math.max(
             this.currentProfile.desiredConcurrency - 1,
-            this.currentProfile.minConcurrency
+            this.currentProfile.minConcurrency,
         );
-        
+
         this.recordScalingEvent('burst_mode', 'exited');
         log.info(`Exited burst mode: concurrency reduced to ${this.currentProfile.desiredConcurrency}`);
     }
-    
+
     private shouldEnterCooldownMode(): boolean {
         return (
-            this.performanceMetrics.errorRate > 0.1 ||
-            this.performanceMetrics.blockingRate > 0.05 ||
-            this.errorStreak > 3 ||
-            this.performanceMetrics.successRate < 0.7
+            this.performanceMetrics.errorRate > 0.1
+            || this.performanceMetrics.blockingRate > 0.05
+            || this.errorStreak > 3
+            || this.performanceMetrics.successRate < 0.7
         );
     }
-    
+
     private enterCooldownMode(): void {
         this.cooldownModeActive = true;
         this.currentProfile.desiredConcurrency = this.currentProfile.minConcurrency;
-        
+
         this.recordScalingEvent('cooldown_mode', 'entered');
         log.warning(`Entered cooldown mode: concurrency reduced to ${this.currentProfile.desiredConcurrency}`);
-        
+
         // Auto-exit cooldown mode after cooldown period
         setTimeout(() => {
             this.exitCooldownMode();
         }, this.currentProfile.cooldownPeriod);
     }
-    
+
     private exitCooldownMode(): void {
         this.cooldownModeActive = false;
         this.currentProfile.desiredConcurrency = Math.min(
             this.currentProfile.desiredConcurrency + 1,
-            this.currentProfile.maxConcurrency
+            this.currentProfile.maxConcurrency,
         );
-        
+
         this.recordScalingEvent('cooldown_mode', 'exited');
         log.info(`Exited cooldown mode: concurrency increased to ${this.currentProfile.desiredConcurrency}`);
     }
-    
+
     private shouldScaleUp(): boolean {
         return (
-            this.performanceMetrics.successRate > this.currentProfile.scaleUpThreshold &&
-            this.performanceMetrics.averageResponseTime < 2000 &&
-            this.performanceMetrics.errorRate < 0.05 &&
-            this.successStreak > 5 &&
-            this.currentProfile.desiredConcurrency < this.currentProfile.maxConcurrency &&
-            !this.burstModeActive &&
-            !this.cooldownModeActive
+            this.performanceMetrics.successRate > this.currentProfile.scaleUpThreshold
+            && this.performanceMetrics.averageResponseTime < 2000
+            && this.performanceMetrics.errorRate < 0.05
+            && this.successStreak > 5
+            && this.currentProfile.desiredConcurrency < this.currentProfile.maxConcurrency
+            && !this.burstModeActive
+            && !this.cooldownModeActive
         );
     }
-    
+
     private shouldScaleDown(): boolean {
         return (
-            this.performanceMetrics.successRate < this.currentProfile.scaleDownThreshold ||
-            this.performanceMetrics.averageResponseTime > 3000 ||
-            this.performanceMetrics.errorRate > 0.1 ||
-            this.errorStreak > 2 ||
-            this.performanceMetrics.blockingRate > 0.05
+            this.performanceMetrics.successRate < this.currentProfile.scaleDownThreshold
+            || this.performanceMetrics.averageResponseTime > 3000
+            || this.performanceMetrics.errorRate > 0.1
+            || this.errorStreak > 2
+            || this.performanceMetrics.blockingRate > 0.05
         );
     }
-    
+
     private scaleUp(): void {
         const oldConcurrency = this.currentProfile.desiredConcurrency;
         this.currentProfile.desiredConcurrency = Math.min(
             this.currentProfile.desiredConcurrency + this.currentProfile.scaleUpStep,
-            this.currentProfile.maxConcurrency
+            this.currentProfile.maxConcurrency,
         );
-        
+
         this.recordScalingEvent('scale_up', `from ${oldConcurrency} to ${this.currentProfile.desiredConcurrency}`);
         log.info(`Scaled up concurrency: ${oldConcurrency} → ${this.currentProfile.desiredConcurrency}`);
-        
+
         this.successStreak++;
         this.errorStreak = 0;
     }
-    
+
     private scaleDown(): void {
         const oldConcurrency = this.currentProfile.desiredConcurrency;
         this.currentProfile.desiredConcurrency = Math.max(
             this.currentProfile.desiredConcurrency - this.currentProfile.scaleDownStep,
-            this.currentProfile.minConcurrency
+            this.currentProfile.minConcurrency,
         );
-        
+
         this.recordScalingEvent('scale_down', `from ${oldConcurrency} to ${this.currentProfile.desiredConcurrency}`);
         log.warning(`Scaled down concurrency: ${oldConcurrency} → ${this.currentProfile.desiredConcurrency}`);
-        
+
         this.errorStreak++;
         this.successStreak = 0;
     }
-    
+
     private recordScalingEvent(type: string, details: string): void {
         this.scalingHistory.push({
             type,
             details,
             timestamp: Date.now(),
             concurrency: this.currentProfile.desiredConcurrency,
-            metrics: { ...this.performanceMetrics }
+            metrics: { ...this.performanceMetrics },
         });
-        
+
         this.lastScaleTime = Date.now();
-        
+
         // Keep only last 50 scaling events
         if (this.scalingHistory.length > 50) {
             this.scalingHistory.shift();
         }
     }
-    
+
     /**
      * Record request outcome for adaptive learning
      */
@@ -315,41 +314,39 @@ class AdvancedConcurrencyManager {
             this.errorStreak++;
             this.successStreak = 0;
         }
-        
+
         // Update metrics
-        this.performanceMetrics.averageResponseTime = 
-            (this.performanceMetrics.averageResponseTime * 0.9) + (responseTime * 0.1);
-        
+        this.performanceMetrics.averageResponseTime = (this.performanceMetrics.averageResponseTime * 0.9) + (responseTime * 0.1);
+
         if (wasBlocked) {
-            this.performanceMetrics.blockingRate = 
-                (this.performanceMetrics.blockingRate * 0.95) + 0.05;
+            this.performanceMetrics.blockingRate = (this.performanceMetrics.blockingRate * 0.95) + 0.05;
         } else {
             this.performanceMetrics.blockingRate *= 0.99;
         }
-        
+
         // Trigger adaptive scaling if needed
         if (this.adaptiveConfig.enableAdaptiveScaling) {
             setTimeout(() => this.performAdaptiveScaling(), 1000);
         }
     }
-    
+
     private startPerformanceMonitoring(): void {
         // Monitor performance every 30 seconds
         setInterval(() => {
             this.updatePerformanceMetrics();
-            
+
             if (this.adaptiveConfig.enableAdaptiveScaling) {
                 this.performAdaptiveScaling();
             }
         }, 30000);
     }
-    
+
     /**
      * Get current configuration for crawler
      */
     getCrawlerConfig(): any {
         const profile = this.getOptimalConcurrency();
-        
+
         return {
             maxConcurrency: profile.maxConcurrency,
             desiredConcurrency: profile.desiredConcurrency,
@@ -367,10 +364,10 @@ class AdvancedConcurrencyManager {
                 enableBurstMode: this.adaptiveConfig.enableBurstMode,
                 enableCooldownMode: this.adaptiveConfig.enableCooldownMode,
                 enableMemoryOptimization: this.adaptiveConfig.enableMemoryOptimization,
-            }
+            },
         };
     }
-    
+
     /**
      * Get performance statistics
      */
@@ -384,10 +381,10 @@ class AdvancedConcurrencyManager {
             cooldownModeActive: this.cooldownModeActive,
             errorStreak: this.errorStreak,
             successStreak: this.successStreak,
-            lastScaleTime: this.lastScaleTime
+            lastScaleTime: this.lastScaleTime,
         };
     }
-    
+
     /**
      * Update adaptive configuration
      */
@@ -395,7 +392,7 @@ class AdvancedConcurrencyManager {
         this.adaptiveConfig = { ...this.adaptiveConfig, ...config };
         log.info('Updated adaptive configuration:', config);
     }
-    
+
     /**
      * Force specific concurrency level (for testing)
      */
@@ -403,9 +400,9 @@ class AdvancedConcurrencyManager {
         const oldConcurrency = this.currentProfile.desiredConcurrency;
         this.currentProfile.desiredConcurrency = Math.max(
             Math.min(concurrency, this.currentProfile.maxConcurrency),
-            this.currentProfile.minConcurrency
+            this.currentProfile.minConcurrency,
         );
-        
+
         this.recordScalingEvent('manual_override', `from ${oldConcurrency} to ${this.currentProfile.desiredConcurrency}`);
         log.info(`Manually set concurrency: ${oldConcurrency} → ${this.currentProfile.desiredConcurrency}`);
     }

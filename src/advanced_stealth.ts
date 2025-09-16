@@ -43,7 +43,7 @@ const BROWSER_PROFILES: BrowserFingerprint[] = [
         fonts: ['Arial', 'Calibri', 'Cambria', 'Comic Sans MS', 'Consolas', 'Courier New', 'Georgia', 'Impact', 'Lucida Console', 'Lucida Sans Unicode', 'Microsoft Sans Serif', 'Palatino Linotype', 'Segoe UI', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana'],
         plugins: ['Chrome PDF Plugin', 'Chrome PDF Viewer', 'Native Client'],
         webRTC: true,
-        battery: { level: 0.85, charging: false }
+        battery: { level: 0.85, charging: false },
     },
     {
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -61,7 +61,7 @@ const BROWSER_PROFILES: BrowserFingerprint[] = [
         fonts: ['Arial', 'Arial Black', 'Arial Narrow', 'Arial Rounded MT Bold', 'Arial Unicode MS', 'Baskerville', 'Big Caslon', 'Brush Script MT', 'Chalkboard', 'Chalkboard SE', 'Chalkduster', 'Charcoal CY', 'Cochin', 'Comic Sans MS', 'Copperplate', 'Courier', 'Courier New', 'Didot', 'Futura', 'Geneva', 'Georgia', 'Gill Sans', 'Gill Sans MT', 'Helvetica', 'Helvetica Neue', 'Herculanum', 'Hoefler Text', 'Impact', 'Lucida Grande', 'Marker Felt', 'Menlo', 'Monaco', 'Optima', 'Palatino', 'Papyrus', 'Phosphate', 'Skia', 'Tahoma', 'Times', 'Times New Roman', 'Trebuchet MS', 'Verdana', 'Zapfino'],
         plugins: ['Chrome PDF Plugin', 'Chrome PDF Viewer', 'Native Client'],
         webRTC: true,
-        battery: { level: 0.92, charging: true }
+        battery: { level: 0.92, charging: true },
     },
     {
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
@@ -78,7 +78,7 @@ const BROWSER_PROFILES: BrowserFingerprint[] = [
         fonts: ['Arial', 'Calibri', 'Cambria', 'Comic Sans MS', 'Consolas', 'Courier New', 'Georgia', 'Impact', 'Lucida Console', 'Lucida Sans Unicode', 'Microsoft Sans Serif', 'Palatino Linotype', 'Segoe UI', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana'],
         plugins: ['PDF.js', 'OpenH264 Video Codec'],
         webRTC: true,
-        battery: { level: 0.78, charging: false }
+        battery: { level: 0.78, charging: false },
     },
     {
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15',
@@ -96,22 +96,22 @@ const BROWSER_PROFILES: BrowserFingerprint[] = [
         fonts: ['Arial', 'Arial Black', 'Arial Narrow', 'Arial Rounded MT Bold', 'Arial Unicode MS', 'Baskerville', 'Big Caslon', 'Brush Script MT', 'Chalkboard', 'Chalkboard SE', 'Chalkduster', 'Charcoal CY', 'Cochin', 'Comic Sans MS', 'Copperplate', 'Courier', 'Courier New', 'Didot', 'Futura', 'Geneva', 'Georgia', 'Gill Sans', 'Gill Sans MT', 'Helvetica', 'Helvetica Neue', 'Herculanum', 'Hoefler Text', 'Impact', 'Lucida Grande', 'Marker Felt', 'Menlo', 'Monaco', 'Optima', 'Palatino', 'Papyrus', 'Phosphate', 'Skia', 'Tahoma', 'Times', 'Times New Roman', 'Trebuchet MS', 'Verdana', 'Zapfino'],
         plugins: ['WebKit built-in PDF', 'WebKit PDF Viewer'],
         webRTC: true,
-        battery: { level: 0.95, charging: true }
-    }
+        battery: { level: 0.95, charging: true },
+    },
 ];
 
 // Advanced session management with behavioral patterns
 class AdvancedSessionManager {
     private sessions: Map<string, AdvancedSession> = new Map();
-    private currentSessionId: string = '';
+    private currentSessionId = '';
     private sessionRotationCount = 0;
     private readonly maxSessionDuration = 1800000; // 30 minutes
     private readonly maxRequestsPerSession = 100;
-    
+
     createSession(): string {
         const sessionId = this.generateSecureSessionId();
         const profile = this.selectOptimalProfile();
-        
+
         this.sessions.set(sessionId, {
             id: sessionId,
             profile,
@@ -136,48 +136,48 @@ class AdvancedSessionManager {
                 averageDelay: 3000,
                 delayVariance: 1000,
                 burstPattern: 'normal',
-                timeOfDay: new Date().getHours()
-            }
+                timeOfDay: new Date().getHours(),
+            },
         });
-        
+
         this.currentSessionId = sessionId;
         this.sessionRotationCount++;
-        
+
         log.info(`Created advanced session ${sessionId} with profile: ${profile.userAgent.split(' ')[0]}`);
         return sessionId;
     }
-    
+
     private generateSecureSessionId(): string {
         const timestamp = Date.now().toString(36);
         const random = Math.random().toString(36).substring(2);
         return `session_${timestamp}_${random}`;
     }
-    
+
     private selectOptimalProfile(): BrowserFingerprint {
         // Weighted selection based on current time and success rates
         const hour = new Date().getHours();
-        const profiles = BROWSER_PROFILES.filter(profile => {
+        const profiles = BROWSER_PROFILES.filter((profile) => {
             // Prefer profiles that match current timezone patterns
             const profileHour = this.getProfileOptimalHour(profile);
             return Math.abs(hour - profileHour) <= 2;
         });
-        
+
         if (profiles.length === 0) {
             return BROWSER_PROFILES[Math.floor(Math.random() * BROWSER_PROFILES.length)];
         }
-        
+
         return profiles[Math.floor(Math.random() * profiles.length)];
     }
-    
+
     private getProfileOptimalHour(profile: BrowserFingerprint): number {
         // Simulate optimal usage hours based on timezone
-        const timezone = profile.timezone;
+        const { timezone } = profile;
         if (timezone.includes('Europe')) return 14; // Afternoon in Europe
         if (timezone.includes('America/New_York')) return 10; // Morning in EST
         if (timezone.includes('America/Los_Angeles')) return 9; // Morning in PST
         return 12; // Default to noon
     }
-    
+
     private generateBehavioralPattern(): BehavioralPattern {
         return {
             mouseSpeed: 0.5 + Math.random() * 0.5, // 0.5-1.0
@@ -189,84 +189,84 @@ class AdvancedSessionManager {
             navigationStyle: Math.random() > 0.5 ? 'direct' : 'exploratory',
             attentionSpan: 5000 + Math.random() * 10000, // 5-15 seconds
             multitasking: Math.random() > 0.7, // 30% chance
-            deviceType: Math.random() > 0.8 ? 'mobile' : 'desktop'
+            deviceType: Math.random() > 0.8 ? 'mobile' : 'desktop',
         };
     }
-    
+
     getCurrentSession(): AdvancedSession | null {
         return this.sessions.get(this.currentSessionId) || null;
     }
-    
+
     shouldRotateSession(): boolean {
         const session = this.getCurrentSession();
         if (!session) return true;
-        
+
         const now = Date.now();
         const sessionAge = now - session.createdAt;
         const timeSinceLastUse = now - session.lastUsed;
-        
+
         // Rotate based on multiple factors
         return (
-            sessionAge > this.maxSessionDuration ||
-            session.requestCount > this.maxRequestsPerSession ||
-            session.failureCount > 5 ||
-            timeSinceLastUse > 300000 || // 5 minutes
-            this.sessionRotationCount % 20 === 0 // Periodic rotation
+            sessionAge > this.maxSessionDuration
+            || session.requestCount > this.maxRequestsPerSession
+            || session.failureCount > 5
+            || timeSinceLastUse > 300000 // 5 minutes
+            || this.sessionRotationCount % 20 === 0 // Periodic rotation
         );
     }
-    
+
     rotateSession(): string {
         log.info(`Rotating session (rotation #${this.sessionRotationCount + 1})`);
         return this.createSession();
     }
-    
+
     recordRequest(url: string, success: boolean): void {
         const session = this.getCurrentSession();
         if (!session) return;
-        
+
         session.requestCount++;
         session.lastUsed = Date.now();
-        
+
         if (success) {
             session.successCount++;
         } else {
             session.failureCount++;
             session.lastFailure = Date.now();
         }
-        
+
         // Update behavioral patterns based on success/failure
         this.updateBehavioralPattern(session, success);
-        
+
         // Record request history
         session.requestHistory.push({
             url,
             timestamp: Date.now(),
             success,
-            responseTime: Math.random() * 1000 + 200 // Simulated response time
+            responseTime: Math.random() * 1000 + 200, // Simulated response time
         });
-        
+
         // Keep only last 50 requests
         if (session.requestHistory.length > 50) {
             session.requestHistory.shift();
         }
     }
-    
+
     private updateBehavioralPattern(session: AdvancedSession, success: boolean): void {
         if (success) {
             // Gradually increase confidence
             session.timingPatterns.averageDelay = Math.max(
                 session.timingPatterns.averageDelay * 0.95,
-                2000
+                2000,
             );
         } else {
             // Increase caution after failures
             session.timingPatterns.averageDelay = Math.min(
                 session.timingPatterns.averageDelay * 1.2,
-                10000
+                10000,
             );
         }
     }
-    
+
     getStats() {
         const sessions = Array.from(this.sessions.values());
         return {
@@ -274,15 +274,15 @@ class AdvancedSessionManager {
             currentSession: this.currentSessionId,
             rotationCount: this.sessionRotationCount,
             averageSuccessRate: sessions.reduce((sum, s) => sum + (s.successCount / (s.successCount + s.failureCount + 1)), 0) / sessions.length,
-            healthySessions: sessions.filter(s => s.isHealthy).length,
-            sessionDetails: sessions.map(s => ({
+            healthySessions: sessions.filter((s) => s.isHealthy).length,
+            sessionDetails: sessions.map((s) => ({
                 id: s.id,
                 profile: s.profile.userAgent.split(' ')[0],
                 requestCount: s.requestCount,
                 successRate: s.successCount / (s.successCount + s.failureCount + 1),
                 isHealthy: s.isHealthy,
-                age: Date.now() - s.createdAt
-            }))
+                age: Date.now() - s.createdAt,
+            })),
         };
     }
 }
@@ -372,14 +372,14 @@ export const advancedSessionManager = new AdvancedSessionManager();
 export const generateAdvancedHeaders = (sessionId?: string): Record<string, string> => {
     const session = sessionId ? advancedSessionManager.getCurrentSession() : null;
     const profile = session?.profile || BROWSER_PROFILES[0];
-    
+
     const headers: Record<string, string> = {
         'User-Agent': profile.userAgent,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         'Accept-Language': `${profile.language},${profile.language.split('-')[0]};q=0.9,en;q=0.8`,
         'Accept-Encoding': 'gzip, deflate, br, zstd',
-        'DNT': '1',
-        'Connection': 'keep-alive',
+        DNT: '1',
+        Connection: 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
         'Sec-Fetch-Dest': 'document',
         'Sec-Fetch-Mode': 'navigate',
@@ -389,10 +389,10 @@ export const generateAdvancedHeaders = (sessionId?: string): Record<string, stri
         'Viewport-Width': profile.viewport.width.toString(),
         'Device-Memory': profile.deviceMemory?.toString() || '8',
         'Hardware-Concurrency': profile.hardwareConcurrency.toString(),
-        'Timezone': profile.timezone,
-        'Platform': profile.platform,
+        Timezone: profile.timezone,
+        Platform: profile.platform,
     };
-    
+
     // Browser-specific headers
     if (profile.userAgent.includes('Chrome')) {
         headers['sec-ch-ua'] = '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"';
@@ -404,19 +404,19 @@ export const generateAdvancedHeaders = (sessionId?: string): Record<string, stri
         headers['sec-ch-ua-model'] = '""';
         headers['sec-ch-ua-wow64'] = '?0';
     }
-    
+
     if (profile.userAgent.includes('Firefox')) {
         headers['Sec-Fetch-Dest'] = 'document';
         headers['Sec-Fetch-Mode'] = 'navigate';
         headers['Sec-Fetch-Site'] = 'none';
         headers['Sec-Fetch-User'] = '?1';
     }
-    
+
     if (profile.userAgent.includes('Safari') && !profile.userAgent.includes('Chrome')) {
-        headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
+        headers.Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
         headers['Accept-Language'] = profile.language;
     }
-    
+
     // Add realistic referrer
     const referrers = [
         'https://www.google.com/',
@@ -426,8 +426,8 @@ export const generateAdvancedHeaders = (sessionId?: string): Record<string, stri
         'https://www.hm.com/',
         'https://www.hm.com/de_de/',
     ];
-    headers['Referer'] = referrers[Math.floor(Math.random() * referrers.length)];
-    
+    headers.Referer = referrers[Math.floor(Math.random() * referrers.length)];
+
     return headers;
 };
 
@@ -437,13 +437,13 @@ export const generateAdvancedHeaders = (sessionId?: string): Record<string, stri
 export const generateIntelligentDelay = (sessionId?: string, requestType?: string): number => {
     const session = sessionId ? advancedSessionManager.getCurrentSession() : null;
     const pattern = session?.behavioralPattern;
-    
+
     if (!pattern) {
         return 2000 + Math.random() * 3000; // Default 2-5 seconds
     }
-    
+
     let baseDelay = pattern.readingTime;
-    
+
     // Adjust based on request type
     switch (requestType) {
         case 'navigation':
@@ -458,16 +458,16 @@ export const generateIntelligentDelay = (sessionId?: string, requestType?: strin
         default:
             baseDelay *= 1.0; // Normal speed
     }
-    
+
     // Add behavioral variance
     const variance = baseDelay * 0.3; // 30% variance
     const delay = baseDelay + (Math.random() - 0.5) * variance;
-    
+
     // Add pause probability
     if (Math.random() < pattern.pauseFrequency) {
         return delay + pattern.readingTime * 0.5; // Extra pause
     }
-    
+
     return Math.max(delay, 1000); // Minimum 1 second
 };
 
@@ -477,24 +477,24 @@ export const generateIntelligentDelay = (sessionId?: string, requestType?: strin
 export const generateRealisticParams = (sessionId?: string): Record<string, string> => {
     const session = sessionId ? advancedSessionManager.getCurrentSession() : null;
     const profile = session?.profile || BROWSER_PROFILES[0];
-    
+
     const params: Record<string, string> = {
-        '_t': Date.now().toString(),
-        '_r': Math.random().toString(36).substring(7),
-        '_v': '1.0',
-        '_c': profile.userAgent.includes('Chrome') ? 'chrome' : 
-              profile.userAgent.includes('Firefox') ? 'firefox' : 'safari',
-        '_p': profile.platform.toLowerCase(),
-        '_l': profile.language,
-        '_tz': profile.timezone,
+        _t: Date.now().toString(),
+        _r: Math.random().toString(36).substring(7),
+        _v: '1.0',
+        _c: profile.userAgent.includes('Chrome') ? 'chrome'
+            : profile.userAgent.includes('Firefox') ? 'firefox' : 'safari',
+        _p: profile.platform.toLowerCase(),
+        _l: profile.language,
+        _tz: profile.timezone,
     };
-    
+
     // Add session-specific parameters
     if (session) {
-        params['_s'] = session.id.substring(0, 8);
-        params['_rc'] = session.requestCount.toString();
+        params._s = session.id.substring(0, 8);
+        params._rc = session.requestCount.toString();
     }
-    
+
     return params;
 };
 

@@ -29,11 +29,11 @@ interface StealthConfiguration {
 class AdvancedStealthMode {
     private stealthConfig: StealthConfiguration;
     private fingerprintCache: Map<string, any> = new Map();
-    
+
     constructor() {
         this.stealthConfig = this.getDefaultStealthConfig();
     }
-    
+
     private getDefaultStealthConfig(): StealthConfiguration {
         return {
             enableWebDriverMasking: true,
@@ -56,44 +56,44 @@ class AdvancedStealthMode {
             enableHardwareConcurrencyAPI: true,
         };
     }
-    
+
     /**
      * Generate comprehensive stealth scripts for browser injection
      */
     generateStealthScripts(): string[] {
         const scripts: string[] = [];
-        
+
         if (this.stealthConfig.enableWebDriverMasking) {
             scripts.push(this.getWebDriverMaskingScript());
         }
-        
+
         if (this.stealthConfig.enableCanvasFingerprintSpoofing) {
             scripts.push(this.getCanvasFingerprintSpoofingScript());
         }
-        
+
         if (this.stealthConfig.enableWebGLFingerprintSpoofing) {
             scripts.push(this.getWebGLFingerprintSpoofingScript());
         }
-        
+
         if (this.stealthConfig.enableAudioFingerprintSpoofing) {
             scripts.push(this.getAudioFingerprintSpoofingScript());
         }
-        
+
         if (this.stealthConfig.enableFontFingerprintSpoofing) {
             scripts.push(this.getFontFingerprintSpoofingScript());
         }
-        
+
         if (this.stealthConfig.enableWebRTCBlocking) {
             scripts.push(this.getWebRTCBlockingScript());
         }
-        
+
         if (this.stealthConfig.enableAutomationDetection) {
             scripts.push(this.getAutomationDetectionScript());
         }
-        
+
         return scripts;
     }
-    
+
     private getWebDriverMaskingScript(): string {
         return `
             // Mask WebDriver properties
@@ -130,7 +130,7 @@ class AdvancedStealthMode {
             };
         `;
     }
-    
+
     private getCanvasFingerprintSpoofingScript(): string {
         return `
             // Canvas fingerprint spoofing
@@ -164,7 +164,7 @@ class AdvancedStealthMode {
             };
         `;
     }
-    
+
     private getWebGLFingerprintSpoofingScript(): string {
         return `
             // WebGL fingerprint spoofing
@@ -191,7 +191,7 @@ class AdvancedStealthMode {
             };
         `;
     }
-    
+
     private getAudioFingerprintSpoofingScript(): string {
         return `
             // Audio fingerprint spoofing
@@ -213,7 +213,7 @@ class AdvancedStealthMode {
             }
         `;
     }
-    
+
     private getFontFingerprintSpoofingScript(): string {
         return `
             // Font fingerprint spoofing
@@ -226,7 +226,7 @@ class AdvancedStealthMode {
             };
         `;
     }
-    
+
     private getWebRTCBlockingScript(): string {
         return `
             // WebRTC blocking to prevent IP leakage
@@ -243,7 +243,7 @@ class AdvancedStealthMode {
             }
         `;
     }
-    
+
     private getAutomationDetectionScript(): string {
         return `
             // Automation detection prevention
@@ -281,27 +281,27 @@ class AdvancedStealthMode {
             });
         `;
     }
-    
+
     /**
      * Generate stealth headers for requests
      */
     generateStealthHeaders(): Record<string, string> {
         return {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept-Encoding': 'gzip, deflate, br',
             'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
+            Pragma: 'no-cache',
             'Sec-Fetch-Dest': 'document',
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-User': '?1',
             'Upgrade-Insecure-Requests': '1',
-            'DNT': '1',
-            'Connection': 'keep-alive',
+            DNT: '1',
+            Connection: 'keep-alive',
         };
     }
-    
+
     /**
      * Generate realistic browser environment variables
      */
@@ -329,11 +329,11 @@ class AdvancedStealthMode {
                     brands: [
                         { brand: 'Google Chrome', version: '131' },
                         { brand: 'Chromium', version: '131' },
-                        { brand: 'Not=A?Brand', version: '24' }
+                        { brand: 'Not=A?Brand', version: '24' },
                     ],
                     mobile: false,
-                    platform: 'Windows'
-                }
+                    platform: 'Windows',
+                },
             },
             screen: {
                 width: 1920,
@@ -344,8 +344,8 @@ class AdvancedStealthMode {
                 pixelDepth: 24,
                 orientation: {
                     type: 'landscape-primary',
-                    angle: 0
-                }
+                    angle: 0,
+                },
             },
             location: {
                 href: 'https://www.google.com/',
@@ -356,38 +356,37 @@ class AdvancedStealthMode {
                 pathname: '/',
                 search: '',
                 hash: '',
-                origin: 'https://www.google.com'
-            }
+                origin: 'https://www.google.com',
+            },
         };
     }
-    
+
     /**
      * Inject stealth scripts into page
      */
     async injectStealthScripts(page: any): Promise<void> {
         try {
             const scripts = this.generateStealthScripts();
-            
+
             for (const script of scripts) {
                 await page.evaluate(script);
             }
-            
+
             // Inject browser environment
             const environment = this.generateBrowserEnvironment();
             await page.evaluate((env: any) => {
                 Object.assign(window, env);
                 Object.assign(navigator, env.navigator);
-                Object.assign(screen, env.screen);
-                Object.assign(location, env.location);
+                Object.assign(window.screen, env.screen);
+                Object.assign(window.location, env.location);
             }, environment);
-            
+
             log.debug('Stealth scripts injected successfully');
-            
         } catch (error: any) {
             log.warning('Failed to inject stealth scripts:', error);
         }
     }
-    
+
     /**
      * Configure stealth mode
      */
@@ -395,7 +394,7 @@ class AdvancedStealthMode {
         this.stealthConfig = { ...this.stealthConfig, ...config };
         log.info('Stealth mode configured:', config);
     }
-    
+
     /**
      * Get current stealth configuration
      */
