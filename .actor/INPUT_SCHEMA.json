@@ -30,6 +30,17 @@
             "description": "Select H&M market to scrape from (40+ countries available)",
             "default": "en_us",
             "editor": "select",
+            "enum": [
+                "en_us", "en_gb", "de_de", "fr_fr", "es_es", "it_it", "nl_nl", "sv_se",
+                "da_dk", "no_no", "fi_fi", "de_at", "fr_be", "nl_be", "de_ch", "fr_ch",
+                "it_ch", "pt_pt", "en_ie", "pl_pl", "cs_cz", "hu_hu", "ro_ro", "sk_sk",
+                "bg_bg", "hr_hr", "sl_si", "el_gr", "tr_tr", "ru_ru", "en_ca", "fr_ca",
+                "es_mx", "es_cl", "es_pe", "es_co", "es_uy", "en_au", "en_nz", "ja_jp",
+                "ko_kr", "zh_cn", "zh_hk", "en_hk", "zh_tw", "en_sg", "en_my", "en_ph",
+                "th_th", "vi_vn", "en_in", "en_ae", "ar_ae", "en_sa", "ar_sa", "en_kw",
+                "en_qa", "en_bh", "en_om", "en_jo", "en_lb", "en_eg", "ar_eg", "en_za",
+                "en_ma", "fr_ma", "he_il"
+            ],
             "enumTitles": [
                 "🇺🇸 USA", "🇬🇧 United Kingdom", "🇩🇪 Germany", "🇫🇷 France", "🇪🇸 Spain",
                 "🇮🇹 Italy", "🇳🇱 Netherlands", "🇸🇪 Sweden", "🇩🇰 Denmark", "🇳🇴 Norway",
@@ -140,6 +151,7 @@
             "description": "Number of products per page (higher = faster)",
             "default": 72,
             "editor": "select",
+            "enum": [36, 72, 108, 128],
             "enumTitles": ["36 (Default)", "72 (Fast)", "108 (Faster)", "128 (Fastest)"]
         },
         "sortBy": {
@@ -148,6 +160,7 @@
             "description": "How to sort products",
             "default": "stock",
             "editor": "select",
+            "enum": ["stock", "newProduct", "ascPrice", "descPrice"],
             "enumTitles": ["Relevance", "Newest First", "Price: Low to High", "Price: High to Low"]
         },
         "includeVariants": {
@@ -177,7 +190,13 @@
             "uniqueItems": true,
             "items": {
                 "type": "string",
-                "editor": "select"
+                "editor": "select",
+                "enum": [
+                    "productId", "title", "description", "price", "originalPrice",
+                    "salePrice", "currency", "colors", "sizes", "materials",
+                    "images", "videos", "category", "url", "inStock", "stockLevel",
+                    "sustainable", "rating", "reviews"
+                ]
             }
         },
         "includeRawData": {
