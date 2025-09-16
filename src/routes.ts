@@ -253,6 +253,9 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
         }
 
         log.info(`Processed ${savedCount} products from ${request.loadedUrl}`);
+        
+        // Record success in scheduler for adaptive behavior
+        smartScheduler.recordSuccess();
 
         if (actorStatistics.hasReachedLimit()) {
             log.info('Product limit reached. Aborting crawl.');
@@ -261,6 +264,10 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
 
     } catch (error: any) {
         const classifiedError = classifyError(error);
+        
+        // Record failure in scheduler for adaptive behavior
+        smartScheduler.recordFailure();
+        
         log.error(`Error processing product page ${request.loadedUrl}:`, {
             error: classifiedError.message,
             type: classifiedError.type,
@@ -275,6 +282,10 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
             case 'NETWORK':
                 log.warning('Network error, will retry this page');
                 throw error; // Let crawler retry
+            case 'BLOCKING':
+                log.error('Blocking detected, implementing countermeasures');
+                smartScheduler.recordFailure(); // Record additional failure for blocking
+                throw error; // Let crawler retry with countermeasures
             default:
                 log.warning('Unknown error, skipping this product page');
         }

@@ -8,8 +8,7 @@ import { getAntiBotCrawlerConfig, smartScheduler } from './anti_bot.js';
 import { createEnhancedErrorHandler, retryWithBackoff } from './error_handling.js';
 import { progressiveDataSaver, MemoryOptimizer, DataQualityMonitor } from './progressive_saving.js';
 import { DataPersistence } from './progressive_saving.js';
-
-await Actor.init();
+import { getEnhancedProxyConfiguration } from './proxy_manager.js';
 
 interface InputSchema {
     debug?: boolean,
@@ -83,7 +82,16 @@ if (previousState) {
 
 const startUrls = getStartUrls(useMockRequests, inputCountry);
 
-// Enhanced proxy configuration with retry
+// Enhanced proxy configuration with intelligent rotation
+let enhancedProxyConfig;
+try {
+    enhancedProxyConfig = await getEnhancedProxyConfiguration();
+    log.info('Enhanced proxy configuration loaded successfully');
+} catch (error: any) {
+    log.warning('Enhanced proxy not configured or unavailable; continuing without enhanced proxy management.', error);
+}
+
+// Fallback to standard proxy configuration
 let proxyConfiguration;
 try {
     proxyConfiguration = await retryWithBackoff(
@@ -96,7 +104,7 @@ try {
             retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
         }
     );
-    log.info('Proxy configuration loaded successfully');
+    log.info('Standard proxy configuration loaded successfully');
 } catch (error: any) {
     log.warning('Proxy not configured or unavailable; continuing without a proxy.', error);
 }
@@ -104,17 +112,24 @@ try {
 // Enhanced crawler configuration with all best practices
 const crawlerConfig = getAntiBotCrawlerConfig({
     proxyConfiguration,
-    maxConcurrency: CONCURRENCY,
+    maxConcurrency: CONCURRENCY, // Reduced concurrency for better stealth
     requestHandler: router,
     errorHandler: createEnhancedErrorHandler(),
     failedRequestHandler: createEnhancedErrorHandler(),
     // Additional optimizations
     maxRequestsPerCrawl: maxItems ? maxItems * 2 : undefined, // Allow some overhead
-    requestHandlerTimeoutSecs: 60,
-    maxRequestRetries: 3,
+    requestHandlerTimeoutSecs: 90, // Increased timeout
+    maxRequestRetries: 5, // Increased retries
     // Request optimization
     additionalMimeTypes: ['text/html', 'application/json'],
     ignoreSslErrors: false,
+    // Enhanced stealth settings
+    autoscaledPoolOptions: {
+        maxConcurrency: CONCURRENCY,
+        desiredConcurrency: Math.max(1, CONCURRENCY - 2), // Start with lower concurrency
+        scaleUpStepRatio: 0.1, // Slower scaling up
+        scaleDownStepRatio: 0.5, // Faster scaling down
+    },
 });
 
 const crawler = new CheerioCrawler(crawlerConfig);
@@ -136,6 +151,16 @@ if (typeof maxRunSeconds === 'number' && maxRunSeconds > 0) {
             // Log final statistics
             actorStatistics.logStatistics();
             DataQualityMonitor.logQualityReport();
+            
+            // Log scheduler statistics
+            const schedulerStats = smartScheduler.getStats();
+            log.info('Final scheduler statistics:', schedulerStats);
+            
+            // Log proxy statistics
+            if (enhancedProxyConfig) {
+                const proxyStats = enhancedProxyConfig.getStats();
+                log.info('Final proxy statistics:', proxyStats);
+            }
             
             // Save final state
             await DataPersistence.saveState({
@@ -212,6 +237,16 @@ try {
         // Log final statistics
         actorStatistics.logStatistics();
         DataQualityMonitor.logQualityReport();
+        
+        // Log scheduler statistics
+        const schedulerStats = smartScheduler.getStats();
+        log.info('Final scheduler statistics:', schedulerStats);
+        
+        // Log proxy statistics
+        if (enhancedProxyConfig) {
+            const proxyStats = enhancedProxyConfig.getStats();
+            log.info('Final proxy statistics:', proxyStats);
+        }
         
         // Save final state
         await DataPersistence.saveState({
