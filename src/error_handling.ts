@@ -264,7 +264,7 @@ export const createEnhancedErrorHandler = () => {
         try {
             const actorStatistics = (await import('./actor_statistics.js')).default;
             actorStatistics.saveError(request.url, classifiedError.message);
-        } catch (statsError) {
+        } catch (statsError: any) {
             log.warning('Could not save error to statistics:', statsError);
         }
         
@@ -303,7 +303,7 @@ export const withGracefulDegradation = async <T>(
 ): Promise<T> => {
     try {
         return await primaryOperation();
-    } catch (error) {
+    } catch (error: any) {
         log.warning(`Primary operation failed${context ? ` for ${context}` : ''}, trying fallback:`, error);
         
         try {
@@ -337,7 +337,7 @@ export const recoveryStrategies = {
     },
     
     // Switch to different proxy (if available)
-    switchProxy: async (context: any) => {
+    switchProxy: async (_context: any) => {
         // This would be implemented based on your proxy configuration
         log.info('Proxy switching not implemented in this version');
     },

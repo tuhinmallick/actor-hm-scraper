@@ -88,10 +88,16 @@ let proxyConfiguration;
 try {
     proxyConfiguration = await retryWithBackoff(
         () => Actor.createProxyConfiguration(),
-        { maxRetries: 3, baseDelay: 1000 }
+        { 
+            maxRetries: 3, 
+            baseDelay: 1000,
+            maxDelay: 30000,
+            backoffMultiplier: 2,
+            retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
+        }
     );
     log.info('Proxy configuration loaded successfully');
-} catch (error) {
+} catch (error: any) {
     log.warning('Proxy not configured or unavailable; continuing without a proxy.', error);
 }
 
@@ -106,8 +112,6 @@ const crawlerConfig = getAntiBotCrawlerConfig({
     maxRequestsPerCrawl: maxItems ? maxItems * 2 : undefined, // Allow some overhead
     requestHandlerTimeoutSecs: 60,
     maxRequestRetries: 3,
-    // Memory optimizations
-    maxMemoryUsage: 0.8, // 80% of available memory
     // Request optimization
     additionalMimeTypes: ['text/html', 'application/json'],
     ignoreSslErrors: false,
@@ -142,7 +146,7 @@ if (typeof maxRunSeconds === 'number' && maxRunSeconds > 0) {
             
             // Graceful shutdown
             await crawler.autoscaledPool?.abort();
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error during graceful shutdown:', error);
         } finally {
             await Actor.exit();
@@ -168,11 +172,17 @@ try {
     // Start crawling with retry mechanism
     await retryWithBackoff(
         () => crawler.run(startUrls),
-        { maxRetries: 2, baseDelay: 5000 },
+        { 
+            maxRetries: 2, 
+            baseDelay: 5000,
+            maxDelay: 30000,
+            backoffMultiplier: 2,
+            retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
+        },
         'crawler startup'
     );
     
-} catch (error) {
+} catch (error: any) {
     log.error('Crawler failed to start:', error);
     
     // Attempt recovery
@@ -184,7 +194,7 @@ try {
             recoveryAttempted: true,
             timestamp: new Date().toISOString(),
         });
-    } catch (recoveryError) {
+    } catch (recoveryError: any) {
         log.error('Recovery failed:', recoveryError);
     }
     
@@ -215,7 +225,7 @@ try {
         
         log.info('Scraping completed successfully');
         
-    } catch (cleanupError) {
+    } catch (cleanupError: any) {
         log.error('Error during final cleanup:', cleanupError);
     }
 }

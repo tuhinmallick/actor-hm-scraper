@@ -90,7 +90,6 @@ export const getAntiBotCrawlerConfig = (baseConfig: Partial<CheerioCrawlerOption
         // Request configuration
         requestHandlerTimeoutSecs: 60,
         maxRequestRetries: 3,
-        requestHandlerTimeoutSecs: 60,
         
         // Anti-bot evasion
         additionalMimeTypes: ['text/html', 'application/json'],
@@ -128,7 +127,7 @@ export const getAntiBotCrawlerConfig = (baseConfig: Partial<CheerioCrawlerOption
                 // Inject random mouse movements and scrolls to simulate human behavior
                 if (page) {
                     try {
-                        await page.evaluate(() => {
+                        await (page as any).evaluate(() => {
                             // Random mouse movement
                             const event = new MouseEvent('mousemove', {
                                 clientX: Math.random() * window.innerWidth,
@@ -139,7 +138,7 @@ export const getAntiBotCrawlerConfig = (baseConfig: Partial<CheerioCrawlerOption
                             // Random scroll
                             window.scrollTo(0, Math.random() * document.body.scrollHeight);
                         });
-                    } catch (error) {
+                    } catch (error: any) {
                         log.debug('Could not inject mouse movements:', error);
                     }
                 }

@@ -135,8 +135,14 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
 
         // Enhanced product info extraction with error handling
         const productInfo = await retryWithBackoff(
-            () => getProductInfo($, body as string),
-            { maxRetries: 2, baseDelay: 1000 },
+            async () => getProductInfo($, body as string),
+            { 
+                maxRetries: 2, 
+                baseDelay: 1000,
+                maxDelay: 30000,
+                backoffMultiplier: 2,
+                retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
+            },
             'product info extraction'
         );
 
@@ -145,7 +151,7 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
             division: breadcrumbDivision,
             category: breadcrumbCategory,
             subCategory: breadcrumbSubCategory,
-        } = productInfo;
+        } = productInfo as any;
 
         // Prefer getting categorization data from breadcrumb
         // If breadcrumb is incomplete, get data from path, the product was found
@@ -156,12 +162,18 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
 
         // Enhanced product object extraction with retry
         const productObject = await retryWithBackoff(
-            () => getProductInfoObject(body as string),
-            { maxRetries: 2, baseDelay: 1000 },
+            async () => getProductInfoObject(body as string),
+            { 
+                maxRetries: 2, 
+                baseDelay: 1000,
+                maxDelay: 30000,
+                backoffMultiplier: 2,
+                retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
+            },
             'product object extraction'
         );
 
-        const combinationInfo = getCombinationsInfoFromProductObject(productObject);
+        const combinationInfo = getCombinationsInfoFromProductObject(productObject as any);
         const combinationImages = getAllCombinationImages($);
 
         // Check if we've already reached the limit before processing this product
@@ -247,7 +259,7 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
             await crawler.autoscaledPool?.abort();
         }
 
-    } catch (error) {
+    } catch (error: any) {
         const classifiedError = classifyError(error);
         log.error(`Error processing product page ${request.loadedUrl}:`, {
             error: classifiedError.message,
