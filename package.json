@@ -1,8 +1,8 @@
 {
-	"name": "hm-com",
-	"version": "0.0.1",
+	"name": "hm-com-enhanced-scraper",
+	"version": "1.0.0",
 	"type": "module",
-	"description": "This is a boilerplate of an Apify actor.",
+	"description": "Enhanced HM.com scraper with comprehensive anti-bot detection, progressive saving, and best practices",
 	"engines": {
 		"node": ">=18.0.0"
 	},
@@ -29,6 +29,16 @@
 		"lint:fix": "eslint ./src --ext .ts --fix",
 		"test": "echo \"Error: oops, the actor has no tests yet, sad!\" && exit 1"
 	},
-	"author": "It's not you it's me",
-	"license": "ISC"
+	"author": "Enhanced Scraper Team",
+	"license": "ISC",
+	"keywords": [
+		"web-scraping",
+		"hm",
+		"h&m",
+		"fashion",
+		"e-commerce",
+		"anti-bot",
+		"progressive-saving",
+		"data-quality"
+	]
 }
