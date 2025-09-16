@@ -147,7 +147,6 @@ Extract products from H&M's global network with the most advanced scraper availa
 ### Performance Options
 ```json
 {
-    "productsPerPage": 128,
     "maxConcurrency": 10,
     "extractProductDetails": false,
     "enableProgressiveSaving": true
@@ -165,7 +164,6 @@ Extract products from H&M's global network with the most advanced scraper availa
 | **filters** | object | Product filters (see filtering options) | {} |
 | **maxProducts** | number | Maximum products to scrape | 100 |
 | **maxPages** | number | Maximum pages per category | 0 (unlimited) |
-| **productsPerPage** | number | Products per page (max 128) | 72 |
 | **sortBy** | string | Sort order | "stock" |
 | **includeVariants** | boolean | Include all color/size variants | true |
 | **extractProductDetails** | boolean | Visit product pages for full details | false |
