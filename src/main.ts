@@ -27,8 +27,9 @@ interface InputSchema {
     minQualityScore?: number,
     enableMemoryOptimization?: boolean,
 }
+const input = await Actor.getInput<InputSchema>();
 const {
-    inputCountry,
+    inputCountry = 'GERMANY',
     maxItems,
     maxRunSeconds,
     debug: inputDebug,
@@ -38,10 +39,7 @@ const {
     batchSize = 50,
     minQualityScore = 70,
     enableMemoryOptimization = true,
-} = (await Actor.getInput<InputSchema>())
-?? {
-    inputCountry: 'UNITED KINGDOM',
-};
+} = input ?? {};
 
 const debug = Boolean(inputDebug);
 
