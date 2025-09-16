@@ -1,5 +1,16 @@
 import { log } from 'crawlee';
 import { Actor } from 'apify';
+import { 
+    RETRY_CONFIGS, 
+    classifyError, 
+    ScrapingError,
+    NetworkError,
+    ParsingError,
+    ValidationError,
+    RateLimitError,
+    BlockingError,
+    safeLogError
+} from './types.js';
 
 /**
  * Comprehensive error handling and retry mechanisms
@@ -33,6 +44,9 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
     ],
 };
 
+// Re-export shared configurations
+export { RETRY_CONFIGS };
+
 /**
  * Enhanced error classification
  */
@@ -51,77 +65,6 @@ export interface ClassifiedError {
     retryable: boolean;
     severity: 'low' | 'medium' | 'high' | 'critical';
 }
-
-/**
- * Classify error for appropriate handling
- */
-export const classifyError = (error: Error | string): ClassifiedError => {
-    const errorMessage = typeof error === 'string' ? error : error.message;
-    const lowerMessage = errorMessage.toLowerCase();
-    
-    // Network errors
-    if (lowerMessage.includes('timeout') || lowerMessage.includes('econnreset') || 
-        lowerMessage.includes('etimedout') || lowerMessage.includes('enotfound')) {
-        return {
-            type: ErrorType.NETWORK,
-            message: errorMessage,
-            retryable: true,
-            severity: 'medium',
-        };
-    }
-    
-    // Rate limiting
-    if (lowerMessage.includes('rate limit') || lowerMessage.includes('too many requests') ||
-        lowerMessage.includes('429')) {
-        return {
-            type: ErrorType.RATE_LIMIT,
-            message: errorMessage,
-            retryable: true,
-            severity: 'high',
-        };
-    }
-    
-    // Blocking/CAPTCHA
-    if (lowerMessage.includes('blocked') || lowerMessage.includes('captcha') ||
-        lowerMessage.includes('access denied') || lowerMessage.includes('forbidden')) {
-        return {
-            type: ErrorType.BLOCKING,
-            message: errorMessage,
-            retryable: true,
-            severity: 'critical',
-        };
-    }
-    
-    // Parsing errors
-    if (lowerMessage.includes('parse') || lowerMessage.includes('json') ||
-        lowerMessage.includes('invalid') || lowerMessage.includes('malformed')) {
-        return {
-            type: ErrorType.PARSING,
-            message: errorMessage,
-            retryable: false,
-            severity: 'medium',
-        };
-    }
-    
-    // Validation errors
-    if (lowerMessage.includes('validation') || lowerMessage.includes('required') ||
-        lowerMessage.includes('missing')) {
-        return {
-            type: ErrorType.VALIDATION,
-            message: errorMessage,
-            retryable: false,
-            severity: 'low',
-        };
-    }
-    
-    // Unknown errors
-    return {
-        type: ErrorType.UNKNOWN,
-        message: errorMessage,
-        retryable: true,
-        severity: 'medium',
-    };
-};
 
 /**
  * Calculate delay for exponential backoff
@@ -264,8 +207,8 @@ export const createEnhancedErrorHandler = () => {
         try {
             const actorStatistics = (await import('./actor_statistics.js')).default;
             actorStatistics.saveError(request.url, classifiedError.message);
-        } catch (statsError: any) {
-            log.warning('Could not save error to statistics:', statsError);
+        } catch (statsError: unknown) {
+            log.warning('Could not save error to statistics:', safeLogError(statsError));
         }
         
         // Handle different error types
@@ -303,8 +246,8 @@ export const withGracefulDegradation = async <T>(
 ): Promise<T> => {
     try {
         return await primaryOperation();
-    } catch (error: any) {
-        log.warning(`Primary operation failed${context ? ` for ${context}` : ''}, trying fallback:`, error);
+    } catch (error: unknown) {
+        log.warning(`Primary operation failed${context ? ` for ${context}` : ''}, trying fallback:`, safeLogError(error));
         
         try {
             return await fallbackOperation();

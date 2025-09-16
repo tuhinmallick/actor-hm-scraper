@@ -1,5 +1,6 @@
 import { CheerioCrawlerOptions } from 'crawlee';
 import { log } from 'crawlee';
+import { PageInterface, isPageInterface, safeLogError } from './types.js';
 
 /**
  * Comprehensive anti-bot detection evasion configuration
@@ -125,9 +126,9 @@ export const getAntiBotCrawlerConfig = (baseConfig: Partial<CheerioCrawlerOption
                 const { page } = crawlingContext;
                 
                 // Inject random mouse movements and scrolls to simulate human behavior
-                if (page) {
+                if (page && isPageInterface(page)) {
                     try {
-                        await (page as any).evaluate(() => {
+                        await page.evaluate(() => {
                             // Random mouse movement
                             const event = new MouseEvent('mousemove', {
                                 clientX: Math.random() * window.innerWidth,
@@ -138,8 +139,8 @@ export const getAntiBotCrawlerConfig = (baseConfig: Partial<CheerioCrawlerOption
                             // Random scroll
                             window.scrollTo(0, Math.random() * document.body.scrollHeight);
                         });
-                    } catch (error: any) {
-                        log.debug('Could not inject mouse movements:', error);
+                    } catch (error: unknown) {
+                        log.debug('Could not inject mouse movements:', safeLogError(error));
                     }
                 }
             },

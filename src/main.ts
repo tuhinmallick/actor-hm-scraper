@@ -5,9 +5,10 @@ import { getStartUrls } from './tools.js';
 import actorStatistics from './actor_statistics.js';
 import { CONCURRENCY } from './constants.js';
 import { getAntiBotCrawlerConfig, smartScheduler } from './anti_bot.js';
-import { createEnhancedErrorHandler, retryWithBackoff } from './error_handling.js';
+import { createEnhancedErrorHandler, retryWithBackoff, RETRY_CONFIGS } from './error_handling.js';
 import { progressiveDataSaver, MemoryOptimizer, DataQualityMonitor } from './progressive_saving.js';
 import { DataPersistence } from './progressive_saving.js';
+import { safeLogError } from './types.js';
 
 await Actor.init();
 
@@ -88,17 +89,11 @@ let proxyConfiguration;
 try {
     proxyConfiguration = await retryWithBackoff(
         () => Actor.createProxyConfiguration(),
-        { 
-            maxRetries: 3, 
-            baseDelay: 1000,
-            maxDelay: 30000,
-            backoffMultiplier: 2,
-            retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
-        }
+        RETRY_CONFIGS.PROXY_CONFIGURATION
     );
     log.info('Proxy configuration loaded successfully');
-} catch (error: any) {
-    log.warning('Proxy not configured or unavailable; continuing without a proxy.', error);
+} catch (error: unknown) {
+    log.warning('Proxy not configured or unavailable; continuing without a proxy.', safeLogError(error));
 }
 
 // Enhanced crawler configuration with all best practices
@@ -146,8 +141,8 @@ if (typeof maxRunSeconds === 'number' && maxRunSeconds > 0) {
             
             // Graceful shutdown
             await crawler.autoscaledPool?.abort();
-        } catch (error: any) {
-            log.error('Error during graceful shutdown:', error);
+        } catch (error: unknown) {
+            log.error('Error during graceful shutdown:', safeLogError(error));
         } finally {
             await Actor.exit();
         }
@@ -172,30 +167,24 @@ try {
     // Start crawling with retry mechanism
     await retryWithBackoff(
         () => crawler.run(startUrls),
-        { 
-            maxRetries: 2, 
-            baseDelay: 5000,
-            maxDelay: 30000,
-            backoffMultiplier: 2,
-            retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
-        },
+        RETRY_CONFIGS.CRAWLER_STARTUP,
         'crawler startup'
     );
     
-} catch (error: any) {
-    log.error('Crawler failed to start:', error);
+} catch (error: unknown) {
+    log.error('Crawler failed to start:', safeLogError(error));
     
     // Attempt recovery
     try {
         log.info('Attempting recovery...');
         await progressiveDataSaver.forceSave();
         await DataPersistence.saveState({
-            error: error.toString(),
+            error: error instanceof Error ? error.toString() : String(error),
             recoveryAttempted: true,
             timestamp: new Date().toISOString(),
         });
-    } catch (recoveryError: any) {
-        log.error('Recovery failed:', recoveryError);
+    } catch (recoveryError: unknown) {
+        log.error('Recovery failed:', safeLogError(recoveryError));
     }
     
     throw error;
@@ -225,8 +214,8 @@ try {
         
         log.info('Scraping completed successfully');
         
-    } catch (cleanupError: any) {
-        log.error('Error during final cleanup:', cleanupError);
+    } catch (cleanupError: unknown) {
+        log.error('Error during final cleanup:', safeLogError(cleanupError));
     }
 }
 

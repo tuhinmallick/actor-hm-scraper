@@ -1,4 +1,5 @@
 import { log } from 'crawlee';
+import { safeLogError } from './types.js';
 
 /**
  * Comprehensive data validation and cleaning utilities
@@ -110,8 +111,8 @@ export const cleanUrl = (url: string): string => {
         trackingParams.forEach(param => urlObj.searchParams.delete(param));
         
         return urlObj.toString();
-    } catch (error: any) {
-        log.warning(`Invalid URL: ${url}`, error);
+    } catch (error: unknown) {
+        log.warning(`Invalid URL: ${url}`, safeLogError(error));
         return '';
     }
 };
@@ -132,8 +133,8 @@ export const cleanImageUrl = (imageUrl: string): string => {
         
         const urlObj = new URL(imageUrl);
         return urlObj.toString();
-    } catch (error: any) {
-        log.warning(`Invalid image URL: ${imageUrl}`, error);
+    } catch (error: unknown) {
+        log.warning(`Invalid image URL: ${imageUrl}`, safeLogError(error));
         return '';
     }
 };
@@ -248,8 +249,8 @@ export const cleanAndValidateProduct = (rawProduct: any): ProductData | null => 
         }
         
         return cleanedProduct;
-    } catch (error: any) {
-        log.error('Error cleaning product data:', error);
+    } catch (error: unknown) {
+        log.error('Error cleaning product data:', safeLogError(error));
         return null;
     }
 };

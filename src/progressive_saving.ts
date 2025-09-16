@@ -1,6 +1,7 @@
 import { Actor } from 'apify';
 import { log } from 'crawlee';
 import { ProductData, cleanAndValidateProduct, deduplicateProducts, filterByQuality } from './data_validation.js';
+import { safeLogError } from './types.js';
 
 /**
  * Progressive data saving system
@@ -63,8 +64,8 @@ export class ProgressiveDataSaver {
             }
             
             return true;
-        } catch (error: any) {
-            log.error('Error adding product to buffer:', error);
+        } catch (error: unknown) {
+            log.error('Error adding product to buffer:', safeLogError(error));
             return false;
         }
     }
@@ -107,8 +108,8 @@ export class ProgressiveDataSaver {
             
             log.info(`Saved ${productsToSave.length} products to dataset (total: ${this.totalSaved})`);
             
-        } catch (error: any) {
-            log.error('Error saving buffer to dataset:', error);
+        } catch (error: unknown) {
+            log.error('Error saving buffer to dataset:', safeLogError(error));
             
             // Retry with exponential backoff
             await this.retrySave();
@@ -136,8 +137,8 @@ export class ProgressiveDataSaver {
                 log.info(`Retry save successful: ${this.buffer.length} products saved`);
                 return;
                 
-            } catch (error: any) {
-                log.error(`Retry attempt ${attempt} failed:`, error);
+            } catch (error: unknown) {
+                log.error(`Retry attempt ${attempt} failed:`, safeLogError(error));
                 
                 if (attempt === this.config.maxRetries) {
                     log.error('All retry attempts failed, data may be lost');
@@ -229,8 +230,8 @@ export const saveProductsOptimized = async (products: ProductData[]): Promise<vo
         
         log.info(`Successfully saved ${products.length} products`);
         
-    } catch (error: any) {
-        log.error('Error saving products:', error);
+    } catch (error: unknown) {
+        log.error('Error saving products:', safeLogError(error));
         throw error;
     }
 };
@@ -250,8 +251,8 @@ export class DataPersistence {
                 ...state,
                 timestamp: new Date().toISOString(),
             });
-        } catch (error: any) {
-            log.warning('Could not save persistence state:', error);
+        } catch (error: unknown) {
+            log.warning('Could not save persistence state:', safeLogError(error));
         }
     }
     
@@ -262,8 +263,8 @@ export class DataPersistence {
         try {
             const state = await Actor.getValue(this.PERSISTENCE_KEY);
             return state;
-        } catch (error: any) {
-            log.warning('Could not load persistence state:', error);
+        } catch (error: unknown) {
+            log.warning('Could not load persistence state:', safeLogError(error));
             return null;
         }
     }
@@ -274,8 +275,8 @@ export class DataPersistence {
     static async clearState(): Promise<void> {
         try {
             await Actor.setValue(this.PERSISTENCE_KEY, null);
-        } catch (error: any) {
-            log.warning('Could not clear persistence state:', error);
+        } catch (error: unknown) {
+            log.warning('Could not clear persistence state:', safeLogError(error));
         }
     }
 }

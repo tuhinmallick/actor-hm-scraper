@@ -20,8 +20,9 @@ import { getBaseProductId, getMainImageFromMiniature } from './tools.js';
 import actorStatistics from './actor_statistics.js';
 import { progressiveDataSaver, DataQualityMonitor } from './progressive_saving.js';
 import { cleanAndValidateProduct, calculateProductQualityScore } from './data_validation.js';
-import { retryWithBackoff, classifyError } from './error_handling.js';
+import { retryWithBackoff, RETRY_CONFIGS } from './error_handling.js';
 import { smartScheduler, detectAndHandleBlocking } from './anti_bot.js';
+import { ProductInfo, ProductObject, isProductInfo, isProductObject, classifyError } from './types.js';
 
 export const router = createCheerioRouter();
 
@@ -136,22 +137,25 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
         // Enhanced product info extraction with error handling
         const productInfo = await retryWithBackoff(
             async () => getProductInfo($, body as string),
-            { 
-                maxRetries: 2, 
-                baseDelay: 1000,
-                maxDelay: 30000,
-                backoffMultiplier: 2,
-                retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
-            },
+            RETRY_CONFIGS.PRODUCT_EXTRACTION,
             'product info extraction'
         );
 
-        const {
-            productName,
-            division: breadcrumbDivision,
-            category: breadcrumbCategory,
-            subCategory: breadcrumbSubCategory,
-        } = productInfo as any;
+        let breadcrumbDivision: string | undefined;
+        let breadcrumbCategory: string | undefined;
+        let breadcrumbSubCategory: string | undefined;
+        let productName: string;
+
+        if (isProductInfo(productInfo)) {
+            ({ 
+                productName,
+                division: breadcrumbDivision, 
+                category: breadcrumbCategory, 
+                subCategory: breadcrumbSubCategory 
+            } = productInfo);
+        } else {
+            throw new Error('Product info does not match expected type structure');
+        }
 
         // Prefer getting categorization data from breadcrumb
         // If breadcrumb is incomplete, get data from path, the product was found
@@ -163,17 +167,16 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
         // Enhanced product object extraction with retry
         const productObject = await retryWithBackoff(
             async () => getProductInfoObject(body as string),
-            { 
-                maxRetries: 2, 
-                baseDelay: 1000,
-                maxDelay: 30000,
-                backoffMultiplier: 2,
-                retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND']
-            },
+            RETRY_CONFIGS.PRODUCT_EXTRACTION,
             'product object extraction'
         );
 
-        const combinationInfo = getCombinationsInfoFromProductObject(productObject as any);
+        let combinationInfo;
+        if (isProductObject(productObject)) {
+            combinationInfo = getCombinationsInfoFromProductObject(productObject);
+        } else {
+            throw new Error('Product object does not match expected type for getCombinationsInfoFromProductObject');
+        }
         const combinationImages = getAllCombinationImages($);
 
         // Check if we've already reached the limit before processing this product
@@ -259,7 +262,7 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
             await crawler.autoscaledPool?.abort();
         }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         const classifiedError = classifyError(error);
         log.error(`Error processing product page ${request.loadedUrl}:`, {
             error: classifiedError.message,
