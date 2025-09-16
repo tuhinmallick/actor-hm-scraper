@@ -18,6 +18,10 @@ import {
 } from './extractors.js';
 import { getBaseProductId, getMainImageFromMiniature } from './tools.js';
 import actorStatistics from './actor_statistics.js';
+import { progressiveDataSaver, DataQualityMonitor } from './progressive_saving.js';
+import { cleanAndValidateProduct, calculateProductQualityScore } from './data_validation.js';
+import { retryWithBackoff, classifyError } from './error_handling.js';
+import { smartScheduler, detectAndHandleBlocking } from './anti_bot.js';
 
 export const router = createCheerioRouter();
 
@@ -109,84 +113,158 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, enqueueLinks }) =>
 
 /**
  * Product detail page.
- * Saves product details to dataset.
+ * Saves product details to dataset with progressive saving and quality monitoring.
  * Enqueues other combinations of this product
  */
 router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => {
     const { divisionName, categoryName, country, label } = request.userData;
     log.info(`${label}: country: ${country.name} - ${request.loadedUrl}`);
 
-    const timestamp = new Date().toISOString();
+    try {
+        // Check for blocking before processing
+        const isBlocked = await detectAndHandleBlocking({ $, response: request });
+        if (isBlocked) {
+            log.warning('Blocking detected, skipping product page');
+            return;
+        }
 
-    const {
-        productName,
-        division: breadcrumbDivision,
-        category: breadcrumbCategory,
-        subCategory: breadcrumbSubCategory,
-    } = getProductInfo($, body as string);
+        // Schedule request with smart rate limiting
+        await smartScheduler.scheduleRequest();
 
-    // Prefer getting categorization data from breadcrumb
-    // If breadcrumb is incomplete, get data from path, the product was found
-    // Subcategory from inherits the category name, because products with incomplete breadcrumb usually are not assigned to subcategory
-    const division = breadcrumbDivision ?? divisionName;
-    const category = breadcrumbCategory ?? categoryName;
-    const subCategory = breadcrumbSubCategory ?? categoryName;
+        const timestamp = new Date().toISOString();
 
-    const productObject = getProductInfoObject(body as string);
-    const combinationInfo = getCombinationsInfoFromProductObject(productObject);
-    const combinationImages = getAllCombinationImages($);
+        // Enhanced product info extraction with error handling
+        const productInfo = await retryWithBackoff(
+            () => getProductInfo($, body as string),
+            { maxRetries: 2, baseDelay: 1000 },
+            'product info extraction'
+        );
 
-    const remaining = actorStatistics.remainingToLimit();
-    const sliceTo = remaining === null ? combinationInfo.length : remaining;
-    const products = combinationInfo
-        .slice(0, sliceTo)
-        .map((combination) => {
         const {
-            listPrice,
-            salePrice,
-            articleNo,
-            description,
-            urlPath,
-            imageUrl: combinationImageUrl,
-        } = combination;
-
-        const url = new URL(urlPath, BASE_URL);
-
-        const uniqueProductKey = `${articleNo}_${country.code}`;
-
-        // Some products have duplicates, everything should be scraped only once
-        if (scrapedProducts[uniqueProductKey]) return null;
-        scrapedProducts[uniqueProductKey] = true;
-
-        // Try to get image from miniature if possible
-        const imageUrl = combinationImages[articleNo] ? getMainImageFromMiniature(combinationImages[articleNo]) : combinationImageUrl;
-
-        return {
-            company: COMPANY,
-            country: country.name,
             productName,
-            articleNo: parseInt(combination.articleNo, 10),
-            division,
-            category,
-            subCategory,
-            listPrice,
-            salePrice,
-            currency: country.currency,
-            description,
-            url: url.toString(),
-            imageUrl,
-            timestamp,
-        };
-    });
+            division: breadcrumbDivision,
+            category: breadcrumbCategory,
+            subCategory: breadcrumbSubCategory,
+        } = productInfo;
 
-    const filtered = products.filter(Boolean);
-    if (filtered.length > 0) {
-        await Actor.pushData(filtered);
-        actorStatistics.incrementCounter(filtered.length);
-    }
+        // Prefer getting categorization data from breadcrumb
+        // If breadcrumb is incomplete, get data from path, the product was found
+        // Subcategory from inherits the category name, because products with incomplete breadcrumb usually are not assigned to subcategory
+        const division = breadcrumbDivision ?? divisionName;
+        const category = breadcrumbCategory ?? categoryName;
+        const subCategory = breadcrumbSubCategory ?? categoryName;
 
-    if (actorStatistics.hasReachedLimit()) {
-        log.info('Product limit reached. Aborting crawl.');
-        await crawler.autoscaledPool?.abort();
+        // Enhanced product object extraction with retry
+        const productObject = await retryWithBackoff(
+            () => getProductInfoObject(body as string),
+            { maxRetries: 2, baseDelay: 1000 },
+            'product object extraction'
+        );
+
+        const combinationInfo = getCombinationsInfoFromProductObject(productObject);
+        const combinationImages = getAllCombinationImages($);
+
+        // Check if we've already reached the limit before processing this product
+        if (actorStatistics.hasReachedLimit()) {
+            log.info('Product limit reached. Skipping remaining products.');
+            return;
+        }
+
+        const remaining = actorStatistics.remainingToLimit();
+        const sliceTo = remaining === null ? combinationInfo.length : remaining;
+        
+        // Process products with enhanced quality monitoring
+        let savedCount = 0;
+        for (const combination of combinationInfo.slice(0, sliceTo)) {
+            const {
+                listPrice,
+                salePrice,
+                articleNo,
+                description,
+                urlPath,
+                imageUrl: combinationImageUrl,
+            } = combination;
+
+            const url = new URL(urlPath, BASE_URL);
+            const uniqueProductKey = `${articleNo}_${country.code}`;
+
+            // Some products have duplicates, everything should be scraped only once
+            if (scrapedProducts[uniqueProductKey]) continue;
+            scrapedProducts[uniqueProductKey] = true;
+
+            // Try to get image from miniature if possible
+            const imageUrl = combinationImages[articleNo] ? getMainImageFromMiniature(combinationImages[articleNo]) : combinationImageUrl;
+
+            const rawProduct = {
+                company: COMPANY,
+                country: country.name,
+                productName,
+                articleNo: parseInt(combination.articleNo, 10),
+                division,
+                category,
+                subCategory,
+                listPrice,
+                salePrice,
+                currency: country.currency,
+                description,
+                url: url.toString(),
+                imageUrl,
+                timestamp,
+            };
+
+            // Clean and validate product
+            const cleanedProduct = cleanAndValidateProduct(rawProduct);
+            if (!cleanedProduct) {
+                log.warning('Product validation failed, skipping:', rawProduct);
+                DataQualityMonitor.recordProduct(rawProduct as any, false, 0);
+                continue;
+            }
+
+            // Calculate quality score
+            const qualityScore = calculateProductQualityScore(cleanedProduct);
+            DataQualityMonitor.recordProduct(cleanedProduct, true, qualityScore);
+
+            // Save product progressively
+            const saved = await progressiveDataSaver.addProduct(cleanedProduct);
+            if (saved) {
+                savedCount++;
+                actorStatistics.incrementCounter(1);
+                
+                log.debug(`Saved product: ${cleanedProduct.productName} (${cleanedProduct.articleNo}) - Quality: ${qualityScore}`);
+            }
+
+            // Check limit after each product
+            if (actorStatistics.hasReachedLimit()) {
+                log.info('Product limit reached during processing.');
+                break;
+            }
+        }
+
+        log.info(`Processed ${savedCount} products from ${request.loadedUrl}`);
+
+        if (actorStatistics.hasReachedLimit()) {
+            log.info('Product limit reached. Aborting crawl.');
+            await crawler.autoscaledPool?.abort();
+        }
+
+    } catch (error) {
+        const classifiedError = classifyError(error);
+        log.error(`Error processing product page ${request.loadedUrl}:`, {
+            error: classifiedError.message,
+            type: classifiedError.type,
+            severity: classifiedError.severity,
+        });
+
+        // Handle different error types
+        switch (classifiedError.type) {
+            case 'PARSING':
+                log.warning('Parsing error, skipping this product page');
+                break;
+            case 'NETWORK':
+                log.warning('Network error, will retry this page');
+                throw error; // Let crawler retry
+            default:
+                log.warning('Unknown error, skipping this product page');
+        }
     }
 });
