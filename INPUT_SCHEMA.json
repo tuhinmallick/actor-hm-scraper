@@ -1,88 +1,264 @@
 {
-    "title": "Enhanced HM.com Actor - Best Practices Scraper",
+    "title": "H&M Scraper Master Input",
+    "description": "Extract products from 40+ H&M markets with advanced filtering and comprehensive data",
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "inputCountry": {
-            "title": "Country",
+        "startUrls": {
+            "title": "Start URLs",
+            "type": "array",
+            "description": "Direct URLs to scrape (product pages, category pages, or search results)",
+            "prefill": [],
+            "editor": "stringList"
+        },
+        "searchQueries": {
+            "title": "Search Queries",
+            "type": "array",
+            "description": "Search for products by keywords (e.g., 'summer dress', 'denim jacket')",
+            "editor": "stringList"
+        },
+        "categories": {
+            "title": "Categories",
+            "type": "array",
+            "description": "Category paths to scrape (e.g., 'women/dresses', 'men/shirts', 'kids/baby')",
+            "editor": "stringList",
+            "prefill": ["women/products/dresses"]
+        },
+        "country": {
+            "title": "Market / Country",
             "type": "string",
-            "description": "Select country to scrape from",
+            "description": "Select H&M market to scrape from (40+ countries available)",
+            "default": "en_us",
+            "enum": [
+                "en_us", "en_gb", "de_de", "fr_fr", "es_es", "it_it", "nl_nl", "sv_se",
+                "da_dk", "no_no", "fi_fi", "de_at", "fr_be", "nl_be", "de_ch", "fr_ch",
+                "it_ch", "pt_pt", "en_ie", "pl_pl", "cs_cz", "hu_hu", "ro_ro", "sk_sk",
+                "bg_bg", "hr_hr", "sl_si", "el_gr", "tr_tr", "ru_ru", "en_ca", "fr_ca",
+                "es_mx", "es_cl", "es_pe", "es_co", "es_uy", "en_au", "en_nz", "ja_jp",
+                "ko_kr", "zh_cn", "zh_hk", "en_hk", "zh_tw", "en_sg", "en_my", "en_ph",
+                "th_th", "vi_vn", "en_in", "en_ae", "ar_ae", "en_sa", "ar_sa", "en_kw",
+                "en_qa", "en_bh", "en_om", "en_jo", "en_lb", "en_eg", "ar_eg", "en_za",
+                "en_ma", "fr_ma", "he_il"
+            ],
+            "enumTitles": [
+                "🇺🇸 USA", "🇬🇧 United Kingdom", "🇩🇪 Germany", "🇫🇷 France", "🇪🇸 Spain",
+                "🇮🇹 Italy", "🇳🇱 Netherlands", "🇸🇪 Sweden", "🇩🇰 Denmark", "🇳🇴 Norway",
+                "🇫🇮 Finland", "🇦🇹 Austria", "🇧🇪 Belgium (FR)", "🇧🇪 Belgium (NL)",
+                "🇨🇭 Switzerland (DE)", "🇨🇭 Switzerland (FR)", "🇨🇭 Switzerland (IT)",
+                "🇵🇹 Portugal", "🇮🇪 Ireland", "🇵🇱 Poland", "🇨🇿 Czech Republic",
+                "🇭🇺 Hungary", "🇷🇴 Romania", "🇸🇰 Slovakia", "🇧🇬 Bulgaria", "🇭🇷 Croatia",
+                "🇸🇮 Slovenia", "🇬🇷 Greece", "🇹🇷 Turkey", "🇷🇺 Russia", "🇨🇦 Canada (EN)",
+                "🇨🇦 Canada (FR)", "🇲🇽 Mexico", "🇨🇱 Chile", "🇵🇪 Peru", "🇨🇴 Colombia",
+                "🇺🇾 Uruguay", "🇦🇺 Australia", "🇳🇿 New Zealand", "🇯🇵 Japan", "🇰🇷 South Korea",
+                "🇨🇳 China", "🇭🇰 Hong Kong (ZH)", "🇭🇰 Hong Kong (EN)", "🇹🇼 Taiwan",
+                "🇸🇬 Singapore", "🇲🇾 Malaysia", "🇵🇭 Philippines", "🇹🇭 Thailand",
+                "🇻🇳 Vietnam", "🇮🇳 India", "🇦🇪 UAE (EN)", "🇦🇪 UAE (AR)", "🇸🇦 Saudi Arabia (EN)",
+                "🇸🇦 Saudi Arabia (AR)", "🇰🇼 Kuwait", "🇶🇦 Qatar", "🇧🇭 Bahrain", "🇴🇲 Oman",
+                "🇯🇴 Jordan", "🇱🇧 Lebanon", "🇪🇬 Egypt (EN)", "🇪🇬 Egypt (AR)",
+                "🇿🇦 South Africa", "🇲🇦 Morocco (EN)", "🇲🇦 Morocco (FR)", "🇮🇱 Israel"
+            ]
+        },
+        "filters": {
+            "title": "Product Filters",
+            "type": "object",
+            "description": "Filter products by various criteria",
+            "editor": "json",
+            "properties": {
+                "minPrice": {
+                    "title": "Min Price",
+                    "type": "number",
+                    "description": "Minimum price in local currency",
+                    "minimum": 0
+                },
+                "maxPrice": {
+                    "title": "Max Price",
+                    "type": "number",
+                    "description": "Maximum price in local currency",
+                    "minimum": 0
+                },
+                "colors": {
+                    "title": "Colors",
+                    "type": "array",
+                    "description": "Filter by colors (e.g., 'black', 'white', 'red', 'blue')",
+                    "editor": "stringList"
+                },
+                "sizes": {
+                    "title": "Sizes",
+                    "type": "array",
+                    "description": "Filter by sizes (e.g., 'XS', 'S', 'M', 'L', 'XL')",
+                    "editor": "stringList"
+                },
+                "materials": {
+                    "title": "Materials",
+                    "type": "array",
+                    "description": "Filter by materials (e.g., 'cotton', 'polyester', 'wool')",
+                    "editor": "stringList"
+                },
+                "patterns": {
+                    "title": "Patterns",
+                    "type": "array",
+                    "description": "Filter by patterns (e.g., 'solid', 'striped', 'floral')",
+                    "editor": "stringList"
+                },
+                "fits": {
+                    "title": "Fits",
+                    "type": "array",
+                    "description": "Filter by fit (e.g., 'slim', 'regular', 'oversized')",
+                    "editor": "stringList"
+                },
+                "lengths": {
+                    "title": "Lengths",
+                    "type": "array",
+                    "description": "Filter by length (e.g., 'mini', 'midi', 'maxi')",
+                    "editor": "stringList"
+                },
+                "sale": {
+                    "title": "Sale Items Only",
+                    "type": "boolean",
+                    "description": "Only get products on sale",
+                    "default": false
+                },
+                "sustainable": {
+                    "title": "Sustainable Only",
+                    "type": "boolean",
+                    "description": "Only get sustainable/conscious products",
+                    "default": false
+                },
+                "newArrivals": {
+                    "title": "New Arrivals Only",
+                    "type": "boolean",
+                    "description": "Only get new arrival products",
+                    "default": false
+                }
+            }
+        },
+        "maxProducts": {
+            "title": "Maximum Products",
+            "type": "integer",
+            "description": "Maximum number of products to scrape (0 = unlimited)",
+            "default": 100,
+            "minimum": 0,
+            "maximum": 50000
+        },
+        "maxPages": {
+            "title": "Maximum Pages",
+            "type": "integer",
+            "description": "Maximum pages to scrape per category (0 = unlimited)",
+            "default": 0,
+            "minimum": 0
+        },
+        "productsPerPage": {
+            "title": "Products Per Page",
+            "type": "integer",
+            "description": "Number of products per page (higher = faster)",
+            "default": 72,
+            "minimum": 36,
+            "maximum": 128,
+            "enum": [36, 72, 108, 128],
+            "enumTitles": ["36 (Default)", "72 (Fast)", "108 (Faster)", "128 (Fastest)"]
+        },
+        "sortBy": {
+            "title": "Sort Products By",
+            "type": "string",
+            "description": "How to sort products",
+            "default": "stock",
+            "enum": ["stock", "newProduct", "ascPrice", "descPrice"],
+            "enumTitles": ["Relevance", "Newest First", "Price: Low to High", "Price: High to Low"]
+        },
+        "includeVariants": {
+            "title": "Include All Variants",
+            "type": "boolean",
+            "description": "Extract all color and size variants",
+            "default": true
+        },
+        "extractProductDetails": {
+            "title": "Extract Full Details",
+            "type": "boolean",
+            "description": "Visit product pages for complete information (slower but more data)",
+            "default": false
+        },
+        "includeStoreAvailability": {
+            "title": "Include Store Availability",
+            "type": "boolean",
+            "description": "Check availability in physical stores",
+            "default": false
+        },
+        "outputFields": {
+            "title": "Output Fields",
+            "type": "array",
+            "description": "Select specific fields to include (empty = all fields)",
             "editor": "select",
-            "default": "UNITED KINGDOM",
-            "enum": ["UNITED KINGDOM", "USA", "ITALY", "GERMANY", "FRANCE", "AUSTRALIA", "SPAIN", "CANADA", "MEXICO"],
-            "enumTitles": ["UNITED KINGDOM", "USA", "ITALY", "GERMANY", "FRANCE", "AUSTRALIA", "SPAIN", "CANADA", "MEXICO"]
+            "default": [],
+            "uniqueItems": true,
+            "items": {
+                "type": "string",
+                "enum": [
+                    "productId", "title", "description", "price", "originalPrice",
+                    "salePrice", "currency", "colors", "sizes", "materials",
+                    "images", "videos", "category", "url", "inStock", "stockLevel",
+                    "sustainable", "rating", "reviews"
+                ]
+            }
         },
-        "maxItems": {
-            "title": "Max items",
+        "includeRawData": {
+            "title": "Include Raw Data",
+            "type": "boolean",
+            "description": "Include original H&M data structure",
+            "default": false
+        },
+        "includeTranslations": {
+            "title": "Include Original Language",
+            "type": "boolean",
+            "description": "Include product info in original market language",
+            "default": false
+        },
+        "proxyConfiguration": {
+            "title": "Proxy Configuration",
+            "type": "object",
+            "description": "Use proxies to avoid blocking",
+            "prefill": { "useApifyProxy": true },
+            "editor": "proxy"
+        },
+        "maxConcurrency": {
+            "title": "Max Concurrency",
             "type": "integer",
-            "description": "Maximum number of products to save (leave empty for no cap)",
-            "editor": "number",
+            "description": "Maximum parallel requests",
+            "default": 5,
             "minimum": 1,
-            "maximum": 100000,
-            "default": 1000
+            "maximum": 50
         },
-        "maxRunSeconds": {
-            "title": "Max run time (seconds)",
+        "requestTimeout": {
+            "title": "Request Timeout",
             "type": "integer",
-            "description": "Maximum time to run the scraper in seconds",
-            "editor": "number",
-            "minimum": 60,
-            "maximum": 86400,
-            "default": 3600
+            "description": "Timeout per request in seconds",
+            "default": 60,
+            "minimum": 30,
+            "maximum": 300
         },
         "enableAntiBot": {
-            "title": "Enable Anti-Bot Detection Evasion",
+            "title": "Anti-Bot Protection",
             "type": "boolean",
-            "description": "Enable advanced anti-bot detection evasion techniques",
-            "editor": "checkbox",
+            "description": "Use advanced anti-detection (recommended)",
+            "default": true
+        },
+        "enableSmartExtraction": {
+            "title": "Smart Extraction",
+            "type": "boolean",
+            "description": "Use AI-powered extraction with fallbacks",
             "default": true
         },
         "enableProgressiveSaving": {
-            "title": "Enable Progressive Data Saving",
+            "title": "Progressive Saving",
             "type": "boolean",
-            "description": "Save data as it's scraped to prevent data loss",
-            "editor": "checkbox",
-            "default": true
-        },
-        "batchSize": {
-            "title": "Batch size",
-            "type": "integer",
-            "description": "Number of products to save in each batch",
-            "editor": "number",
-            "minimum": 10,
-            "maximum": 500,
-            "default": 50
-        },
-        "minQualityScore": {
-            "title": "Minimum quality score",
-            "type": "integer",
-            "description": "Minimum quality score for products to be saved (0-100)",
-            "editor": "number",
-            "minimum": 0,
-            "maximum": 100,
-            "default": 70
-        },
-        "enableMemoryOptimization": {
-            "title": "Enable Memory Optimization",
-            "type": "boolean",
-            "description": "Enable memory usage monitoring and optimization",
-            "editor": "checkbox",
+            "description": "Save data in batches during scraping",
             "default": true
         },
         "debug": {
-            "title": "Debug mode",
+            "title": "Debug Mode",
             "type": "boolean",
-            "description": "Enable debug logging for troubleshooting",
-            "editor": "checkbox",
-            "default": false
-        },
-        "useMockRequests": {
-            "title": "Use mock requests (testing only)",
-            "type": "boolean",
-            "description": "Use mock requests for local testing (DO NOT USE IN PRODUCTION)",
-            "editor": "checkbox",
+            "description": "Enable detailed logging",
             "default": false
         }
     },
-    "required": ["inputCountry"]
+    "required": []
 }
