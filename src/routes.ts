@@ -24,6 +24,7 @@ import { retryWithBackoff, classifyError } from './error_handling.js';
 import { smartScheduler, detectAndHandleBlocking } from './anti_bot.js';
 import { SmartDataExtractor } from './smart_extractor.js';
 import { HMUrlBuilder } from './url_builder.js';
+import { DataSanitizer } from './data_sanitizer.js';
 
 export const router = createCheerioRouter();
 
@@ -186,17 +187,17 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, $, body, crawler, 
                     const rawProduct = {
                         company: COMPANY,
                         country: country.name,
-                        productName: product.title,
-                        articleNo: product.articleCode,
-                        division: divisionName,
-                        category: categoryName,
-                        subCategory: product.category,
-                        listPrice: parseFloat(product.regularPrice?.replace(/[^0-9.,]/g, '').replace(',', '.') || '0'),
-                        salePrice: product.redPrice ? parseFloat(product.redPrice.replace(/[^0-9.,]/g, '').replace(',', '.')) : null,
-                        currency: country.currency,
+                        productName: DataSanitizer.sanitizeString(product.title),
+                        articleNo: DataSanitizer.sanitizeProductId(product.articleCode),
+                        division: DataSanitizer.sanitizeString(divisionName),
+                        category: DataSanitizer.sanitizeString(categoryName),
+                        subCategory: DataSanitizer.sanitizeString(product.category),
+                        listPrice: DataSanitizer.sanitizeNumber(product.regularPrice),
+                        salePrice: product.redPrice ? DataSanitizer.sanitizeNumber(product.redPrice) : null,
+                        currency: DataSanitizer.sanitizeCurrency(country.currency),
                         description: '',
-                        url: product.pdpUrl.startsWith('http') ? product.pdpUrl : new URL(product.pdpUrl, BASE_URL).toString(),
-                        imageUrl: product.imageUrl,
+                        url: DataSanitizer.sanitizeUrl(product.pdpUrl),
+                        imageUrl: DataSanitizer.sanitizeUrl(product.imageUrl),
                         timestamp,
                         colors: product.colors,
                         sizes: product.sizes,
@@ -285,6 +286,90 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, $, body, crawler, 
                 return requestToEnqueue;
             },
         });
+    }
+});
+
+/**
+ * Handle direct product URLs - extract product data directly without navigation
+ */
+router.addHandler('PRODUCT_URL', async ({ log, request, $, body }) => {
+    const { country, label } = request.userData;
+    log.info(`${label}: Extracting product from URL - ${request.loadedUrl}`);
+    
+    try {
+        // Check for blocking
+        const isBlocked = await detectAndHandleBlocking({ $, response: request });
+        if (isBlocked) {
+            log.warning('Blocking detected on product page');
+            return;
+        }
+        
+        // Use smart extractor to get product data
+        const extractedData = SmartDataExtractor.extract(body as string, $);
+        
+        if (extractedData && extractedData.products.length > 0) {
+            const product = extractedData.products[0];
+            
+            // Extract additional details from product page
+            const productObject = await retryWithBackoff(
+                async () => getProductInfoObject(body as string),
+                {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 30000,
+                    backoffMultiplier: 2,
+                    retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
+                },
+                'product object extraction',
+            );
+            
+            const timestamp = new Date().toISOString();
+            
+            // Build comprehensive product data
+            const rawProduct = {
+                company: COMPANY,
+                country: country.name,
+                productName: DataSanitizer.sanitizeString(product.title),
+                articleNo: DataSanitizer.sanitizeProductId(product.articleCode),
+                division: DataSanitizer.sanitizeString(product.category),
+                category: DataSanitizer.sanitizeString(product.category),
+                subCategory: DataSanitizer.sanitizeString(product.subCategory || product.category),
+                listPrice: DataSanitizer.sanitizeNumber(product.regularPrice),
+                salePrice: product.redPrice ? DataSanitizer.sanitizeNumber(product.redPrice) : null,
+                currency: DataSanitizer.sanitizeCurrency(country.currency),
+                description: DataSanitizer.sanitizeString($('.product-description').text() || ''),
+                url: DataSanitizer.sanitizeUrl(request.loadedUrl as string),
+                imageUrl: DataSanitizer.sanitizeUrl(product.imageUrl),
+                timestamp,
+                colors: product.colors,
+                sizes: product.sizes,
+                materials: DataSanitizer.sanitizeStringArray($('.product-details-material').text().split(',')),
+                inStock: DataSanitizer.sanitizeBoolean(product.inStock !== false),
+                sustainable: DataSanitizer.sanitizeBoolean($('.sustainable-style').length > 0),
+            };
+            
+            // Sanitize the entire product
+            const sanitizedProduct = DataSanitizer.sanitizeProduct(rawProduct);
+            
+            // Validate and save
+            const cleanedProduct = cleanAndValidateProduct(sanitizedProduct);
+            if (cleanedProduct) {
+                const qualityScore = calculateProductQualityScore(cleanedProduct);
+                DataQualityMonitor.recordProduct(cleanedProduct, true, qualityScore);
+                
+                const saved = await progressiveDataSaver.addProduct(cleanedProduct);
+                if (saved) {
+                    actorStatistics.incrementCounter(1);
+                    log.info(`Saved product from direct URL: ${cleanedProduct.productName} (${cleanedProduct.articleNo})`);
+                }
+            } else {
+                log.warning('Product validation failed for direct URL');
+            }
+        } else {
+            log.warning('Could not extract product data from URL');
+        }
+    } catch (error: any) {
+        log.error(`Error processing product URL ${request.loadedUrl}:`, error);
     }
 });
 

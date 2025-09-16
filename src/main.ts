@@ -13,6 +13,7 @@ import { javaScriptRenderer } from './javascript_renderer.js';
 import { createEnhancedErrorHandler, retryWithBackoff } from './error_handling.js';
 import { progressiveDataSaver, MemoryOptimizer, DataQualityMonitor, DataPersistence } from './progressive_saving.js';
 import { getEnhancedProxyConfiguration } from './proxy_manager.js';
+import { createApifyProxyConfig } from './apify_proxy_config.js';
 
 interface InputSchema {
     debug?: boolean,
@@ -86,31 +87,37 @@ if (previousState) {
 
 const startUrls = getStartUrls(useMockRequests, inputCountry);
 
-// Enhanced proxy configuration with intelligent rotation
-let enhancedProxyConfig: any;
-try {
-    enhancedProxyConfig = await getEnhancedProxyConfiguration();
-    log.info('Enhanced proxy configuration loaded successfully');
-} catch (error: any) {
-    log.warning('Enhanced proxy not configured or unavailable; continuing without enhanced proxy management.', error);
-}
-
-// Fallback to standard proxy configuration
+// Proxy configuration
 let proxyConfiguration;
-try {
-    proxyConfiguration = await retryWithBackoff(
-        () => Actor.createProxyConfiguration(),
-        {
-            maxRetries: 3,
-            baseDelay: 1000,
-            maxDelay: 30000,
-            backoffMultiplier: 2,
-            retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
-        },
-    );
-    log.info('Standard proxy configuration loaded successfully');
-} catch (error: any) {
-    log.warning('Proxy not configured or unavailable; continuing without a proxy.', error);
+const proxyInput = await Actor.getInput<any>();
+
+// Check if user wants to use proxies
+if (proxyInput?.proxyConfiguration) {
+    try {
+        // Use Apify proxy configuration
+        proxyConfiguration = await createApifyProxyConfig(
+            proxyInput.proxyConfiguration,
+            inputCountry?.toLowerCase()
+        );
+        
+        if (proxyConfiguration) {
+            log.info('Apify proxy configuration loaded successfully');
+        } else {
+            log.info('Running without proxy configuration');
+        }
+    } catch (error: any) {
+        log.warning('Failed to create proxy configuration:', error);
+    }
+} else if (enableAntiBot) {
+    // Use enhanced proxy configuration for anti-bot
+    try {
+        const enhancedProxyConfig = await getEnhancedProxyConfiguration();
+        log.info('Enhanced anti-bot proxy configuration loaded');
+        // Note: Enhanced proxy config returns a custom object, not ProxyConfiguration
+        // We'll use it in the anti-bot config
+    } catch (error: any) {
+        log.warning('Enhanced proxy not available:', error);
+    }
 }
 
 // Advanced crawler configuration with cutting-edge anti-bot techniques

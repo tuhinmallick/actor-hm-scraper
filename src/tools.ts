@@ -1,5 +1,31 @@
 import { Request } from 'crawlee';
 import { BASE_URL, COUNTRIES, Labels } from './constants.js';
+
+/**
+ * Determine if a URL is a product page
+ */
+export const isProductUrl = (url: string): boolean => {
+    return url.includes('/productpage.') || 
+           url.includes('/product/') || 
+           url.includes('article=') ||
+           /\/\d{7,10}\.html/.test(url); // Pattern like /1234567001.html
+};
+
+/**
+ * Determine URL type and create appropriate request
+ */
+export const createRequestFromUrl = (url: string, country: any, userData?: any): Request => {
+    const isProduct = isProductUrl(url);
+    
+    return {
+        url,
+        userData: {
+            label: isProduct ? 'PRODUCT_URL' : Labels.SUB_CATEGORY,
+            country,
+            ...userData,
+        },
+    };
+};
 import { getMockStartUrls } from './debug.js';
 
 /**
