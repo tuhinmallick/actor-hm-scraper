@@ -200,6 +200,7 @@ export const getAntiBotCrawlerConfig = (baseConfig: Partial<CheerioCrawlerOption
 
         // Request configuration
         requestHandlerTimeoutSecs: 120, // Increased timeout for complex interactions
+        requestTimeoutSecs: 60, // Increased HTTP request timeout to handle slow responses
         maxRequestRetries: 7, // Increased retries with advanced backoff
 
         // Anti-bot evasion

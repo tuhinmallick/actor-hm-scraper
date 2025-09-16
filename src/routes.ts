@@ -48,19 +48,51 @@ router.addHandler(Labels.NAVIGATION, async ({ request, json, log, crawler }) => 
  * Route parses number of products in category and enqueues category requests with paginationK
  * It is also run for the category page as some products do not have assigned category on all levels.
  */
-router.addHandler(Labels.SUB_CATEGORY_COUNT, async ({ log, request, $, crawler }) => {
+router.addHandler(Labels.SUB_CATEGORY_COUNT, async ({ log, request, $, body, crawler }) => {
     const { divisionName, categoryName, country, label } = request.userData;
     log.info(`${label}: country: ${country.name} - ${request.loadedUrl}`);
 
-    const productCountText = getProductCount($);
-    const productCountString = $(productCountText).text().trim().match(/\d+/g)
-        ?.join('');
+    let productCount = DEFAULT_NUMBER_OF_PRODUCTS;
+    
+    // Try to extract product count from Next.js data first
+    try {
+        const scriptMatch = (body as string).match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/s);
+        
+        if (scriptMatch) {
+            const jsonData = JSON.parse(scriptMatch[1]);
+            const totalHits = jsonData?.props?.pageProps?.plpProps?.productListingProps?.totalHits;
+            
+            if (totalHits && typeof totalHits === 'number') {
+                productCount = totalHits;
+                log.info(`Found ${productCount} total products from Next.js data`);
+            } else {
+                // Fallback to HTML selector
+                const productCountText = getProductCount($);
+                const productCountString = $(productCountText).text().trim().match(/\d+/g)
+                    ?.join('');
 
-    if (!productCountString) {
-        log.info('Number of products not found. Using default value.');
+                if (productCountString) {
+                    productCount = parseInt(productCountString, 10);
+                } else {
+                    log.info('Number of products not found. Using default value.');
+                }
+            }
+        } else {
+            // Fallback to HTML selector
+            const productCountText = getProductCount($);
+            const productCountString = $(productCountText).text().trim().match(/\d+/g)
+                ?.join('');
+
+            if (productCountString) {
+                productCount = parseInt(productCountString, 10);
+            } else {
+                log.info('Number of products not found. Using default value.');
+            }
+        }
+    } catch (error: any) {
+        log.error('Error extracting product count:', error);
+        // Use default value
     }
-
-    const productCount = productCountString ?? DEFAULT_NUMBER_OF_PRODUCTS;
 
     // Enqueue subcategory requests with pagination
     const requests = [];
@@ -90,25 +122,104 @@ router.addHandler(Labels.SUB_CATEGORY_COUNT, async ({ log, request, $, crawler }
  * Subcategory page.
  * Enqueues all the products from given subcategory.
  */
-router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, enqueueLinks }) => {
+router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, $, body, crawler, enqueueLinks }) => {
     const { divisionName, categoryName, country, label } = request.userData;
     log.info(`${label}: country: ${country.name} - ${request.loadedUrl}`);
-    await enqueueLinks({
-        selector: '.product-item article .item-heading a',
-        userData: {
-            label: Labels.PRODUCT,
-            divisionName,
-            categoryName,
-            country,
-        },
-        transformRequestFunction: (requestToEnqueue) => {
-            // Last two digits of product id are given by it's color
-            // Removing this parameter, so we do not enqueue product combination twice
-            const baseProductId = getBaseProductId(requestToEnqueue.url);
-            requestToEnqueue.uniqueKey = `productpage_${baseProductId}_${country.code}`;
-            return requestToEnqueue;
-        },
-    });
+    
+    try {
+        // Extract Next.js data from the page
+        const scriptMatch = (body as string).match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/s);
+        
+        if (scriptMatch) {
+            const jsonData = JSON.parse(scriptMatch[1]);
+            const products = jsonData?.props?.pageProps?.plpProps?.productListingProps?.hits;
+            
+            if (products && products.length > 0) {
+                log.info(`Found ${products.length} products in Next.js data`);
+                
+                // Enqueue product URLs
+                const requests = [];
+                for (const product of products) {
+                    if (product.pdpUrl) {
+                        const productUrl = product.pdpUrl.startsWith('http') 
+                            ? product.pdpUrl 
+                            : new URL(product.pdpUrl, BASE_URL).toString();
+                        
+                        const baseProductId = getBaseProductId(productUrl);
+                        
+                        requests.push({
+                            url: productUrl,
+                            uniqueKey: `productpage_${baseProductId}_${country.code}`,
+                            userData: {
+                                label: Labels.PRODUCT,
+                                divisionName,
+                                categoryName,
+                                country,
+                                productData: product, // Pass product data to save network requests
+                            },
+                        });
+                    }
+                }
+                
+                await crawler.addRequests(requests);
+                log.info(`Enqueued ${requests.length} product URLs`);
+            } else {
+                log.warning('No products found in Next.js data');
+                
+                // Fallback to traditional selector-based approach
+                await enqueueLinks({
+                    selector: '.product-item article .item-heading a',
+                    userData: {
+                        label: Labels.PRODUCT,
+                        divisionName,
+                        categoryName,
+                        country,
+                    },
+                    transformRequestFunction: (requestToEnqueue: any) => {
+                        const baseProductId = getBaseProductId(requestToEnqueue.url);
+                        requestToEnqueue.uniqueKey = `productpage_${baseProductId}_${country.code}`;
+                        return requestToEnqueue;
+                    },
+                });
+            }
+        } else {
+            log.warning('Could not find __NEXT_DATA__ script tag, falling back to selectors');
+            
+            // Fallback to traditional selector-based approach
+            await enqueueLinks({
+                selector: '.product-item article .item-heading a',
+                userData: {
+                    label: Labels.PRODUCT,
+                    divisionName,
+                    categoryName,
+                    country,
+                },
+                transformRequestFunction: (requestToEnqueue: any) => {
+                    const baseProductId = getBaseProductId(requestToEnqueue.url);
+                    requestToEnqueue.uniqueKey = `productpage_${baseProductId}_${country.code}`;
+                    return requestToEnqueue;
+                },
+            });
+        }
+    } catch (error: any) {
+        log.error('Error parsing Next.js data:', error);
+        
+        // Fallback to traditional selector-based approach
+        await enqueueLinks({
+            selector: '.product-item article .item-heading a',
+            userData: {
+                label: Labels.PRODUCT,
+                divisionName,
+                categoryName,
+                country,
+            },
+            transformRequestFunction: (requestToEnqueue) => {
+                const baseProductId = getBaseProductId(requestToEnqueue.url);
+                requestToEnqueue.uniqueKey = `productpage_${baseProductId}_${country.code}`;
+                return requestToEnqueue;
+            },
+        });
+    }
 });
 
 /**

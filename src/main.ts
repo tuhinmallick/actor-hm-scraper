@@ -119,8 +119,10 @@ const crawlerConfig = getAntiBotCrawlerConfig({
     requestHandler: router,
     errorHandler: createEnhancedErrorHandler(),
     failedRequestHandler: createEnhancedErrorHandler(),
-    // Additional optimizations
-    maxRequestsPerCrawl: maxItems ? maxItems * 2 : undefined, // Allow some overhead
+        // Additional optimizations
+        // For proper operation, we need to allow enough requests to navigate through categories to products
+        // Minimum should be high enough to handle navigation -> categories -> subcategories -> products
+        maxRequestsPerCrawl: maxItems ? Math.max(maxItems * 100, 1000) : undefined, // Allow sufficient requests for navigation
     // Request optimization
     additionalMimeTypes: ['text/html', 'application/json', 'application/xml'],
     ignoreSslErrors: false,
