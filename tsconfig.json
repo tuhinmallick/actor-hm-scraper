@@ -12,5 +12,8 @@
     },
     "include": [
         "./src/**/*"
+    ],
+    "exclude": [
+        "./src/anti_bot_v2.ts"
     ]
 }

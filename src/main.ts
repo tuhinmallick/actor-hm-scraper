@@ -89,6 +89,7 @@ const startUrls = getStartUrls(useMockRequests, inputCountry);
 
 // Proxy configuration
 let proxyConfiguration;
+let enhancedProxyConfig: any;
 const proxyInput = await Actor.getInput<any>();
 
 // Check if user wants to use proxies
@@ -111,7 +112,7 @@ if (proxyInput?.proxyConfiguration) {
 } else if (enableAntiBot) {
     // Use enhanced proxy configuration for anti-bot
     try {
-        const enhancedProxyConfig = await getEnhancedProxyConfiguration();
+        enhancedProxyConfig = await getEnhancedProxyConfiguration();
         log.info('Enhanced anti-bot proxy configuration loaded');
         // Note: Enhanced proxy config returns a custom object, not ProxyConfiguration
         // We'll use it in the anti-bot config

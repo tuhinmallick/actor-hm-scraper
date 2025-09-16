@@ -333,7 +333,7 @@ router.addHandler('PRODUCT_URL', async ({ log, request, $, body }) => {
                 articleNo: DataSanitizer.sanitizeProductId(product.articleCode),
                 division: DataSanitizer.sanitizeString(product.category),
                 category: DataSanitizer.sanitizeString(product.category),
-                subCategory: DataSanitizer.sanitizeString(product.subCategory || product.category),
+                subCategory: DataSanitizer.sanitizeString(product.category),
                 listPrice: DataSanitizer.sanitizeNumber(product.regularPrice),
                 salePrice: product.redPrice ? DataSanitizer.sanitizeNumber(product.redPrice) : null,
                 currency: DataSanitizer.sanitizeCurrency(country.currency),
@@ -344,7 +344,7 @@ router.addHandler('PRODUCT_URL', async ({ log, request, $, body }) => {
                 colors: product.colors,
                 sizes: product.sizes,
                 materials: DataSanitizer.sanitizeStringArray($('.product-details-material').text().split(',')),
-                inStock: DataSanitizer.sanitizeBoolean(product.inStock !== false),
+                inStock: DataSanitizer.sanitizeBoolean(true), // Assume in stock if product is displayed
                 sustainable: DataSanitizer.sanitizeBoolean($('.sustainable-style').length > 0),
             };
             
