@@ -115,20 +115,17 @@
                 "sale": {
                     "title": "Sale Items Only",
                     "type": "boolean",
-                    "description": "Only get products on sale",
-                    "default": false
+                    "description": "Only get products on sale"
                 },
                 "sustainable": {
                     "title": "Sustainable Only",
                     "type": "boolean",
-                    "description": "Only get sustainable/conscious products",
-                    "default": false
+                    "description": "Only get sustainable/conscious products"
                 },
                 "newArrivals": {
                     "title": "New Arrivals Only",
                     "type": "boolean",
-                    "description": "Only get new arrival products",
-                    "default": false
+                    "description": "Only get new arrival products"
                 }
             }
         },

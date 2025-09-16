@@ -15,6 +15,8 @@
 		"@apify/tsconfig": "^0.1.0",
 		"@typescript-eslint/eslint-plugin": "^5.32.0",
 		"@typescript-eslint/parser": "^5.32.0",
+		"ajv": "^8.17.1",
+		"ajv-formats": "^3.0.1",
 		"eslint": "^8.20.0",
 		"ts-node": "^10.9.1",
 		"tsx": "^4.20.5",
