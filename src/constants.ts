@@ -5,7 +5,6 @@ export const DEFAULT_NUMBER_OF_PRODUCTS = 32;
 export const MAX_PRODUCTS_PER_PAGE = 128;
 export const CONCURRENCY = 30;
 
-export const STATE_KEY = 'STATE-HM-INTERNATIONAL';
 export const SCRAPED_PRODUCTS_KEY = 'SCRAPED_PRODUCTS';
 
 export const LOGGING_PERIOD = 120;

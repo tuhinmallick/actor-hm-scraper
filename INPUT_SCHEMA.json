@@ -11,6 +11,13 @@
             "default": "UNITED KINGDOM",
             "enum": ["UNITED KINGDOM", "USA", "ITALY","GERMANY","FRANCE","AUSTRALIA","SPAIN","CANADA","MEXICO"],
             "enumTitles": ["UNITED KINGDOM", "USA", "ITALY","GERMANY","FRANCE","AUSTRALIA","SPAIN","CANADA","MEXICO"]
+        },
+        "maxItems": {
+            "title": "Max items",
+            "type": "integer",
+            "description": "Maximum number of products to save (leave empty for no cap)",
+            "editor": "number",
+            "minimum": 1
         }
     }
 }
