@@ -187,6 +187,6 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
 
     if (actorStatistics.hasReachedLimit()) {
         log.info('Product limit reached. Aborting crawl.');
-        await crawler.pause();
+        await Actor.exit();
     }
 });
