@@ -8,6 +8,8 @@ import { getAntiBotCrawlerConfig, smartScheduler } from './anti_bot.js';
 import { concurrencyManager } from './concurrency_manager.js';
 import { advancedSessionManager } from './advanced_stealth.js';
 import { behavioralSimulator } from './behavioral_simulation.js';
+import { stealthMode } from './stealth_mode.js';
+import { javaScriptRenderer } from './javascript_renderer.js';
 import { createEnhancedErrorHandler, retryWithBackoff } from './error_handling.js';
 import { progressiveDataSaver, MemoryOptimizer, DataQualityMonitor } from './progressive_saving.js';
 import { DataPersistence } from './progressive_saving.js';
@@ -167,6 +169,14 @@ if (typeof maxRunSeconds === 'number' && maxRunSeconds > 0) {
                 log.info('Final proxy statistics:', proxyStats);
             }
             
+            // Log stealth mode statistics
+            const stealthStats = stealthMode.getStealthConfig();
+            log.info('Final stealth mode statistics:', stealthStats);
+            
+            // Log JavaScript renderer statistics
+            const rendererStats = javaScriptRenderer.getPerformanceMetrics();
+            log.info('Final JavaScript renderer statistics:', Object.fromEntries(rendererStats));
+            
             // Save final state
             await DataPersistence.saveState({
                 totalSaved: actorStatistics.getSavedCount(),
@@ -264,6 +274,14 @@ try {
             const proxyStats = enhancedProxyConfig.getStats();
             log.info('Final proxy statistics:', proxyStats);
         }
+        
+        // Log stealth mode statistics
+        const stealthStats = stealthMode.getStealthConfig();
+        log.info('Final stealth mode statistics:', stealthStats);
+        
+        // Log JavaScript renderer statistics
+        const rendererStats = javaScriptRenderer.getPerformanceMetrics();
+        log.info('Final JavaScript renderer statistics:', Object.fromEntries(rendererStats));
         
         // Save final state
         await DataPersistence.saveState({

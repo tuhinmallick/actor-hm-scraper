@@ -3,6 +3,8 @@ import { log } from 'crawlee';
 import { advancedSessionManager, generateAdvancedHeaders, generateIntelligentDelay, generateRealisticParams } from './advanced_stealth.js';
 import { behavioralSimulator } from './behavioral_simulation.js';
 import { concurrencyManager } from './concurrency_manager.js';
+import { stealthMode } from './stealth_mode.js';
+import { javaScriptRenderer } from './javascript_renderer.js';
 
 /**
  * Comprehensive anti-bot detection evasion configuration
@@ -259,12 +261,30 @@ export const getAntiBotCrawlerConfig = (baseConfig: Partial<CheerioCrawlerOption
                     await implementAdvancedBlockingCountermeasures(crawlingContext);
                 }
                 
+                // Inject stealth mode scripts
+                if (page) {
+                    try {
+                        await stealthMode.injectStealthScripts(page);
+                    } catch (error: any) {
+                        log.debug('Stealth mode injection failed:', error);
+                    }
+                }
+                
                 // Simulate realistic browser behavior
                 if (page) {
                     try {
                         await behavioralSimulator.simulatePageInteraction(page, request.url);
                     } catch (error: any) {
                         log.debug('Behavioral simulation failed:', error);
+                    }
+                }
+                
+                // Enhanced JavaScript rendering for dynamic content
+                if (page && javaScriptRenderer.getRenderingConfig().enableJavaScriptExecution) {
+                    try {
+                        await javaScriptRenderer.renderPage(page, request.url);
+                    } catch (error: any) {
+                        log.debug('JavaScript rendering failed:', error);
                     }
                 }
                 
