@@ -25,7 +25,6 @@ interface EnhancedInputSchema {
     // Scraping options
     maxProducts?: number;
     maxPages?: number;
-    productsPerPage?: number;
     sortBy?: 'stock' | 'newProduct' | 'ascPrice' | 'descPrice';
     includeVariants?: boolean;
     extractProductDetails?: boolean;
@@ -54,7 +53,6 @@ const {
     filters = {},
     maxProducts = 100,
     maxPages = 0,
-    productsPerPage = 72,
     sortBy = 'stock',
     includeVariants = true,
     extractProductDetails = false,
@@ -108,8 +106,7 @@ for (const category of categories) {
     
     const urlBuilder = new HMUrlBuilder(url)
         .applyFilters(filters)
-        .applySort({ sort: sortBy })
-        .applyPagination({ pageSize: productsPerPage });
+        .applySort({ sort: sortBy });
     
     urls.push({
         url: urlBuilder.build(),
@@ -125,7 +122,7 @@ for (const category of categories) {
 
 // 3. Generate search URLs
 for (const query of searchQueries) {
-    const searchUrl = `${baseUrl}/search-results/_jcr_content/search.display.json?q=${encodeURIComponent(query)}&page-size=${productsPerPage}`;
+    const searchUrl = `${baseUrl}/search-results/_jcr_content/search.display.json?q=${encodeURIComponent(query)}`;
     
     urls.push({
         url: searchUrl,
