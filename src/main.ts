@@ -29,7 +29,7 @@ interface InputSchema {
 }
 const input = await Actor.getInput<InputSchema>();
 const {
-    inputCountry = 'UNITED KINGDOM',
+    inputCountry = 'GERMANY',
     maxItems,
     maxRunSeconds,
     debug: inputDebug,
@@ -48,11 +48,6 @@ if (debug) {
     log.setLevel(LogLevel.DEBUG);
 } else {
     log.setLevel(LogLevel.INFO);
-}
-
-// Validate inputCountry
-if (!inputCountry) {
-    throw new Error('inputCountry is required. Please provide a valid country name in the Actor input.');
 }
 
 log.info('Starting enhanced HM.com scraper with best practices', {

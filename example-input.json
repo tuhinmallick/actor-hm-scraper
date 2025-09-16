@@ -1,9 +1,3 @@
 {
-  "inputCountry": "UNITED KINGDOM",
-  "maxItems": 100,
-  "enableAntiBot": true,
-  "enableProgressiveSaving": true,
-  "batchSize": 50,
-  "minQualityScore": 70,
-  "enableMemoryOptimization": true
+  "inputCountry": "GERMANY"
 }
