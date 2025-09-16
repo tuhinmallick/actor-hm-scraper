@@ -3,7 +3,7 @@ export const BASE_URL = 'https://www2.hm.com';
 export const COMPANY = 'HM';
 export const DEFAULT_NUMBER_OF_PRODUCTS = 32;
 export const MAX_PRODUCTS_PER_PAGE = 128;
-export const CONCURRENCY = 30;
+export const CONCURRENCY = 5; // Significantly reduced for better stealth
 
 export const SCRAPED_PRODUCTS_KEY = 'SCRAPED_PRODUCTS';
 

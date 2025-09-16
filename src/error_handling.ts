@@ -1,5 +1,5 @@
 import { log } from 'crawlee';
-import { Actor } from 'apify';
+// import { Actor } from 'apify'; // Unused
 
 /**
  * Comprehensive error handling and retry mechanisms
@@ -58,10 +58,10 @@ export interface ClassifiedError {
 export const classifyError = (error: Error | string): ClassifiedError => {
     const errorMessage = typeof error === 'string' ? error : error.message;
     const lowerMessage = errorMessage.toLowerCase();
-    
+
     // Network errors
-    if (lowerMessage.includes('timeout') || lowerMessage.includes('econnreset') || 
-        lowerMessage.includes('etimedout') || lowerMessage.includes('enotfound')) {
+    if (lowerMessage.includes('timeout') || lowerMessage.includes('econnreset')
+        || lowerMessage.includes('etimedout') || lowerMessage.includes('enotfound')) {
         return {
             type: ErrorType.NETWORK,
             message: errorMessage,
@@ -69,10 +69,10 @@ export const classifyError = (error: Error | string): ClassifiedError => {
             severity: 'medium',
         };
     }
-    
+
     // Rate limiting
-    if (lowerMessage.includes('rate limit') || lowerMessage.includes('too many requests') ||
-        lowerMessage.includes('429')) {
+    if (lowerMessage.includes('rate limit') || lowerMessage.includes('too many requests')
+        || lowerMessage.includes('429')) {
         return {
             type: ErrorType.RATE_LIMIT,
             message: errorMessage,
@@ -80,10 +80,10 @@ export const classifyError = (error: Error | string): ClassifiedError => {
             severity: 'high',
         };
     }
-    
+
     // Blocking/CAPTCHA
-    if (lowerMessage.includes('blocked') || lowerMessage.includes('captcha') ||
-        lowerMessage.includes('access denied') || lowerMessage.includes('forbidden')) {
+    if (lowerMessage.includes('blocked') || lowerMessage.includes('captcha')
+        || lowerMessage.includes('access denied') || lowerMessage.includes('forbidden')) {
         return {
             type: ErrorType.BLOCKING,
             message: errorMessage,
@@ -91,10 +91,10 @@ export const classifyError = (error: Error | string): ClassifiedError => {
             severity: 'critical',
         };
     }
-    
+
     // Parsing errors
-    if (lowerMessage.includes('parse') || lowerMessage.includes('json') ||
-        lowerMessage.includes('invalid') || lowerMessage.includes('malformed')) {
+    if (lowerMessage.includes('parse') || lowerMessage.includes('json')
+        || lowerMessage.includes('invalid') || lowerMessage.includes('malformed')) {
         return {
             type: ErrorType.PARSING,
             message: errorMessage,
@@ -102,10 +102,10 @@ export const classifyError = (error: Error | string): ClassifiedError => {
             severity: 'medium',
         };
     }
-    
+
     // Validation errors
-    if (lowerMessage.includes('validation') || lowerMessage.includes('required') ||
-        lowerMessage.includes('missing')) {
+    if (lowerMessage.includes('validation') || lowerMessage.includes('required')
+        || lowerMessage.includes('missing')) {
         return {
             type: ErrorType.VALIDATION,
             message: errorMessage,
@@ -113,7 +113,7 @@ export const classifyError = (error: Error | string): ClassifiedError => {
             severity: 'low',
         };
     }
-    
+
     // Unknown errors
     return {
         type: ErrorType.UNKNOWN,
@@ -127,7 +127,7 @@ export const classifyError = (error: Error | string): ClassifiedError => {
  * Calculate delay for exponential backoff
  */
 export const calculateBackoffDelay = (attempt: number, config: RetryConfig): number => {
-    const delay = config.baseDelay * Math.pow(config.backoffMultiplier, attempt - 1);
+    const delay = config.baseDelay * config.backoffMultiplier ** (attempt - 1);
     const jitter = Math.random() * 0.1 * delay; // Add 10% jitter
     return Math.min(delay + jitter, config.maxDelay);
 };
@@ -138,46 +138,46 @@ export const calculateBackoffDelay = (attempt: number, config: RetryConfig): num
 export const retryWithBackoff = async <T>(
     operation: () => Promise<T>,
     config: RetryConfig = DEFAULT_RETRY_CONFIG,
-    context?: string
+    context?: string,
 ): Promise<T> => {
-    let lastError: Error;
-    
+    let lastError: Error | undefined;
+
     for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
         try {
             const result = await operation();
-            
+
             if (attempt > 1) {
                 log.info(`Operation succeeded on attempt ${attempt}${context ? ` for ${context}` : ''}`);
             }
-            
+
             return result;
         } catch (error) {
             lastError = error as Error;
             const classifiedError = classifyError(lastError);
-            
+
             log.warning(`Attempt ${attempt}/${config.maxRetries} failed${context ? ` for ${context}` : ''}: ${classifiedError.message}`);
-            
+
             // Don't retry if error is not retryable
             if (!classifiedError.retryable) {
                 log.error(`Non-retryable error encountered: ${classifiedError.message}`);
                 throw lastError;
             }
-            
+
             // Don't retry on last attempt
             if (attempt === config.maxRetries) {
                 log.error(`All retry attempts exhausted${context ? ` for ${context}` : ''}`);
                 throw lastError;
             }
-            
+
             // Calculate delay and wait
             const delay = calculateBackoffDelay(attempt, config);
             log.info(`Waiting ${Math.round(delay)}ms before retry ${attempt + 1}${context ? ` for ${context}` : ''}`);
-            
-            await new Promise(resolve => setTimeout(resolve, delay));
+
+            await new Promise((resolve) => setTimeout(resolve, delay));
         }
     }
-    
-    throw lastError!;
+
+    throw new Error(lastError?.message || 'Unknown error occurred');
 };
 
 /**
@@ -187,13 +187,13 @@ export class CircuitBreaker {
     private failureCount = 0;
     private lastFailureTime = 0;
     private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
-    
+
     constructor(
         private failureThreshold = 5,
         private timeout = 60000, // 1 minute
-        private resetTimeout = 300000 // 5 minutes
+        private resetTimeout = 300000, // 5 minutes
     ) {}
-    
+
     async execute<T>(operation: () => Promise<T>, context?: string): Promise<T> {
         if (this.state === 'OPEN') {
             if (Date.now() - this.lastFailureTime > this.resetTimeout) {
@@ -203,7 +203,7 @@ export class CircuitBreaker {
                 throw new Error(`Circuit breaker is OPEN${context ? ` for ${context}` : ''}`);
             }
         }
-        
+
         try {
             const result = await operation();
             this.onSuccess();
@@ -213,22 +213,22 @@ export class CircuitBreaker {
             throw error;
         }
     }
-    
+
     private onSuccess(): void {
         this.failureCount = 0;
         this.state = 'CLOSED';
     }
-    
+
     private onFailure(): void {
         this.failureCount++;
         this.lastFailureTime = Date.now();
-        
+
         if (this.failureCount >= this.failureThreshold) {
             this.state = 'OPEN';
             log.error(`Circuit breaker opened after ${this.failureCount} failures`);
         }
     }
-    
+
     getState(): string {
         return this.state;
     }
@@ -250,7 +250,7 @@ export const createEnhancedErrorHandler = () => {
     return async (context: any, error: Error) => {
         const { request } = context;
         const classifiedError = classifyError(error);
-        
+
         // Log error with context
         log.error(`Request failed: ${request.url}`, {
             error: classifiedError.message,
@@ -259,7 +259,7 @@ export const createEnhancedErrorHandler = () => {
             retryable: classifiedError.retryable,
             retryCount: request.retryCount || 0,
         });
-        
+
         // Save error to statistics
         try {
             const actorStatistics = (await import('./actor_statistics.js')).default;
@@ -267,26 +267,26 @@ export const createEnhancedErrorHandler = () => {
         } catch (statsError: any) {
             log.warning('Could not save error to statistics:', statsError);
         }
-        
+
         // Handle different error types
         switch (classifiedError.type) {
             case ErrorType.RATE_LIMIT:
                 log.warning('Rate limit detected, implementing longer delay');
-                await new Promise(resolve => setTimeout(resolve, 30000)); // 30 second delay
+                await new Promise((resolve) => setTimeout(resolve, 30000)); // 30 second delay
                 break;
-                
+
             case ErrorType.BLOCKING:
                 log.error('Potential blocking detected, consider switching proxies or user agents');
                 break;
-                
+
             case ErrorType.NETWORK:
                 log.info('Network error, will retry with backoff');
                 break;
-                
+
             case ErrorType.PARSING:
                 log.warning('Parsing error, skipping this page');
                 break;
-                
+
             default:
                 log.info('Unknown error type, using default handling');
         }
@@ -299,13 +299,13 @@ export const createEnhancedErrorHandler = () => {
 export const withGracefulDegradation = async <T>(
     primaryOperation: () => Promise<T>,
     fallbackOperation: () => Promise<T>,
-    context?: string
+    context?: string,
 ): Promise<T> => {
     try {
         return await primaryOperation();
     } catch (error: any) {
         log.warning(`Primary operation failed${context ? ` for ${context}` : ''}, trying fallback:`, error);
-        
+
         try {
             return await fallbackOperation();
         } catch (fallbackError) {
@@ -330,18 +330,18 @@ export const recoveryStrategies = {
             'User-Agent': getRandomUserAgent(),
         };
     },
-    
+
     // Add longer delay
-    addDelay: async (delayMs: number = 10000) => {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+    addDelay: async (delayMs = 10000) => {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
     },
-    
+
     // Switch to different proxy (if available)
     switchProxy: async (_context: any) => {
         // This would be implemented based on your proxy configuration
         log.info('Proxy switching not implemented in this version');
     },
-    
+
     // Skip problematic page
     skipPage: async (context: any) => {
         log.info(`Skipping problematic page: ${context.request.url}`);
