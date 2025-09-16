@@ -267,25 +267,6 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, $, body, crawler, 
                     },
                 });
             }
-        } else {
-            log.warning('Could not find __NEXT_DATA__ script tag, falling back to selectors');
-            
-            // Fallback to traditional selector-based approach
-            await enqueueLinks({
-                selector: '.product-item article .item-heading a',
-                userData: {
-                    label: Labels.PRODUCT,
-                    divisionName,
-                    categoryName,
-                    country,
-                },
-                transformRequestFunction: (requestToEnqueue: any) => {
-                    const baseProductId = getBaseProductId(requestToEnqueue.url);
-                    requestToEnqueue.uniqueKey = `productpage_${baseProductId}_${country.code}`;
-                    return requestToEnqueue;
-                },
-            });
-        }
     } catch (error: any) {
         log.error('Error parsing Next.js data:', error);
         

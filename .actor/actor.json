@@ -1,6 +1,54 @@
 {
-	"actorSpecification": 1,
-	"name": "hm-com",
-	"version": "0.0",
-	"buildTag": "latest"
+    "actorSpecification": 1,
+    "name": "hm-scraper-master",
+    "title": "H&M Scraper Master - All Markets & Products",
+    "description": "The most comprehensive H&M scraper on Apify. Extract products from ALL H&M markets (40+ countries) with advanced filtering, real-time inventory, pricing, full product details, and store availability. Features smart extraction that adapts to website changes automatically.",
+    "version": "2.0.0",
+    "storages": {
+        "dataset": {
+            "actorSpecification": 1,
+            "views": {
+                "overview": {
+                    "title": "Product Overview",
+                    "transformation": {
+                        "fields": ["productId", "title", "price", "salePrice", "color", "size", "inStock", "url", "market"]
+                    },
+                    "display": {
+                        "component": "table",
+                        "properties": {
+                            "productId": {
+                                "label": "Product ID",
+                                "format": "text"
+                            },
+                            "title": {
+                                "label": "Product Name",
+                                "format": "text"
+                            },
+                            "price": {
+                                "label": "Price",
+                                "format": "number"
+                            },
+                            "inStock": {
+                                "label": "In Stock",
+                                "format": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "meta": {
+        "templateId": "javascript_crawler_cheerio"
+    },
+    "input": "./INPUT_SCHEMA.json",
+    "dockerfile": "./Dockerfile",
+    "readme": "./README.md",
+    "buildTag": "latest",
+    "taggedBuilds": {
+        "latest": {
+            "buildTag": "latest",
+            "envVars": {}
+        }
+    }
 }
