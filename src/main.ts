@@ -50,7 +50,7 @@ if (typeof maxRunSeconds === 'number' && maxRunSeconds > 0) {
     setTimeout(async () => {
         log.info(`Max run time reached (${maxRunSeconds}s). Aborting crawl.`);
         try {
-            await crawler.pause();
+            await crawler.autoscaledPool?.abort();
         } finally {
             await Actor.exit();
         }

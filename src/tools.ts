@@ -1,5 +1,4 @@
-import type { Request } from '@crawlee/types';
-import { Request as CoreRequest } from '@crawlee/core';
+import { Request } from 'crawlee';
 import { BASE_URL, COUNTRIES, Labels } from './constants.js';
 import { getMockStartUrls } from './debug.js';
 
@@ -41,7 +40,7 @@ export const getProductionStartUrls = (inputCountry:string | undefined, ...extra
     }
 
     return inputCountryDetails.map((country) => {
-        return new CoreRequest({
+        return new Request({
             url: `${BASE_URL}/${country.code}/apis/navigation/v1/nav-data.json`,
             userData: {
                 label: Labels.NAVIGATION,
