@@ -9,7 +9,16 @@ export const getStartUrls = (useMockStartRequests: boolean | undefined, inputCou
 };
 
 export const getProductionStartUrls = (inputCountry:string | undefined): Request[] => {
+    if (!inputCountry) {
+        throw new Error('getProductionStartUrls: inputCountry is required');
+    }
+
     const inputCountryDetails = COUNTRIES.filter((countryDetails) => countryDetails.name === inputCountry);
+
+    if (inputCountryDetails.length === 0) {
+        const supportedCountries = COUNTRIES.map((c) => c.name).join(', ');
+        throw new Error(`Unsupported country: ${inputCountry}. Supported countries: ${supportedCountries}`);
+    }
 
     return inputCountryDetails.map((country) => {
         return new Request({
