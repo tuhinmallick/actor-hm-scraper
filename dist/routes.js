@@ -1,32 +1,12 @@
 import { createCheerioRouter, Request } from 'crawlee';
 import { Actor } from 'apify';
-import {
-    BASE_URL,
-    COMPANY,
-    DEFAULT_NUMBER_OF_PRODUCTS,
-    Labels,
-    MAX_PRODUCTS_PER_PAGE,
-    SCRAPED_PRODUCTS_KEY,
-} from './constants.js';
-import {
-    getAllCombinationImages,
-    getCombinationsInfoFromProductObject,
-    getProductCount,
-    getProductInfo,
-    getProductInfoObject,
-    getCategoriesFromNavigation,
-} from './extractors.js';
+import { BASE_URL, COMPANY, DEFAULT_NUMBER_OF_PRODUCTS, Labels, MAX_PRODUCTS_PER_PAGE, SCRAPED_PRODUCTS_KEY, } from './constants.js';
+import { getAllCombinationImages, getCombinationsInfoFromProductObject, getProductCount, getProductInfo, getProductInfoObject, getCategoriesFromNavigation, } from './extractors.js';
 import { getBaseProductId, getMainImageFromMiniature } from './tools.js';
 import actorStatistics from './actor_statistics.js';
-
 export const router = createCheerioRouter();
-
 const defaultStore = await Actor.openKeyValueStore();
-const scrapedProducts = await defaultStore.getAutoSavedValue<Record<string, boolean>>(
-    SCRAPED_PRODUCTS_KEY,
-    {},
-);
-
+const scrapedProducts = await defaultStore.getAutoSavedValue(SCRAPED_PRODUCTS_KEY, {});
 /**
  * First route for each country.
  * Enqueues category requests
@@ -34,11 +14,9 @@ const scrapedProducts = await defaultStore.getAutoSavedValue<Record<string, bool
 router.addHandler(Labels.NAVIGATION, async ({ request, json, log, crawler }) => {
     const { label, country } = request.userData;
     log.info(`${label}: Enqueueing divisions, country: ${country.name} - ${request.loadedUrl}`);
-
     const requests = getCategoriesFromNavigation(json, country);
     await crawler.addRequests(requests);
 });
-
 /**
  * Subcategory page.
  * Route parses number of products in category and enqueues category requests with paginationK
@@ -47,24 +25,19 @@ router.addHandler(Labels.NAVIGATION, async ({ request, json, log, crawler }) => 
 router.addHandler(Labels.SUB_CATEGORY_COUNT, async ({ log, request, $, crawler }) => {
     const { divisionName, categoryName, country, label } = request.userData;
     log.info(`${label}: country: ${country.name} - ${request.loadedUrl}`);
-
     const productCountText = getProductCount($);
     const productCountString = $(productCountText).text().trim().match(/\d+/g)
         ?.join('');
-
     if (!productCountString) {
         log.info('Number of products not found. Using default value.');
     }
-
     const productCount = productCountString ?? DEFAULT_NUMBER_OF_PRODUCTS;
-
     // Enqueue subcategory requests with pagination
     const requests = [];
     for (let offset = 0; offset < productCount; offset += MAX_PRODUCTS_PER_PAGE) {
-        const url = new URL(request.loadedUrl as string);
+        const url = new URL(request.loadedUrl);
         url.searchParams.set('offset', offset.toString());
         url.searchParams.set('page-size', MAX_PRODUCTS_PER_PAGE.toString());
-
         const newRequest = new Request({
             url: url.toString(),
             userData: {
@@ -74,14 +47,11 @@ router.addHandler(Labels.SUB_CATEGORY_COUNT, async ({ log, request, $, crawler }
                 country,
             },
         });
-
         requests.push(newRequest);
     }
-
     await crawler.addRequests(requests);
     log.info(`${label}: productCount: ${productCount} - ${request.loadedUrl}`);
 });
-
 /**
  * Subcategory page.
  * Enqueues all the products from given subcategory.
@@ -106,7 +76,6 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, enqueueLinks }) =>
         },
     });
 });
-
 /**
  * Product detail page.
  * Saves product details to dataset.
@@ -115,48 +84,27 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, enqueueLinks }) =>
 router.addHandler(Labels.PRODUCT, async ({ log, request, $, body }) => {
     const { divisionName, categoryName, country, label } = request.userData;
     log.info(`${label}: country: ${country.name} - ${request.loadedUrl}`);
-
     const timestamp = new Date().toISOString();
-
-    const {
-        productName,
-        division: breadcrumbDivision,
-        category: breadcrumbCategory,
-        subCategory: breadcrumbSubCategory,
-    } = getProductInfo($, body as string);
-
+    const { productName, division: breadcrumbDivision, category: breadcrumbCategory, subCategory: breadcrumbSubCategory, } = getProductInfo($, body);
     // Prefer getting categorization data from breadcrumb
     // If breadcrumb is incomplete, get data from path, the product was found
     // Subcategory from inherits the category name, because products with incomplete breadcrumb usually are not assigned to subcategory
     const division = breadcrumbDivision ?? divisionName;
     const category = breadcrumbCategory ?? categoryName;
     const subCategory = breadcrumbSubCategory ?? categoryName;
-
-    const productObject = getProductInfoObject(body as string);
+    const productObject = getProductInfoObject(body);
     const combinationInfo = getCombinationsInfoFromProductObject(productObject);
     const combinationImages = getAllCombinationImages($);
-
     const products = combinationInfo.map((combination) => {
-        const {
-            listPrice,
-            salePrice,
-            articleNo,
-            description,
-            urlPath,
-            imageUrl: combinationImageUrl,
-        } = combination;
-
+        const { listPrice, salePrice, articleNo, description, urlPath, imageUrl: combinationImageUrl, } = combination;
         const url = new URL(urlPath, BASE_URL);
-
         const uniqueProductKey = `${articleNo}_${country.code}`;
-
         // Some products have duplicates, everything should be scraped only once
-        if (scrapedProducts[uniqueProductKey]) return null;
+        if (scrapedProducts[uniqueProductKey])
+            return null;
         scrapedProducts[uniqueProductKey] = true;
-
         // Try to get image from miniature if possible
         const imageUrl = combinationImages[articleNo] ? getMainImageFromMiniature(combinationImages[articleNo]) : combinationImageUrl;
-
         return {
             company: COMPANY,
             country: country.name,
@@ -174,7 +122,7 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body }) => {
             timestamp,
         };
     });
-
     await Actor.pushData(products);
     actorStatistics.incrementCounter(products.length);
 });
+//# sourceMappingURL=routes.js.map
