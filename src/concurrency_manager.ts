@@ -349,22 +349,7 @@ class AdvancedConcurrencyManager {
 
         return {
             maxConcurrency: profile.maxConcurrency,
-            desiredConcurrency: profile.desiredConcurrency,
             minConcurrency: profile.minConcurrency,
-            scaleUpStepRatio: profile.scaleUpStep,
-            scaleDownStepRatio: profile.scaleDownStep,
-            autoscaledPoolOptions: {
-                maxConcurrency: profile.maxConcurrency,
-                desiredConcurrency: profile.desiredConcurrency,
-                minConcurrency: profile.minConcurrency,
-                scaleUpStepRatio: profile.scaleUpStep,
-                scaleDownStepRatio: profile.scaleDownStep,
-                // Advanced options
-                enableDynamicConcurrency: true,
-                enableBurstMode: this.adaptiveConfig.enableBurstMode,
-                enableCooldownMode: this.adaptiveConfig.enableCooldownMode,
-                enableMemoryOptimization: this.adaptiveConfig.enableMemoryOptimization,
-            },
         };
     }
 

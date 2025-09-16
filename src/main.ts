@@ -208,9 +208,16 @@ try {
         },
     });
 
-    // Start crawling with retry mechanism
+    // Start crawling with retry mechanism using Crawlee v3's batch request method
     await retryWithBackoff(
-        () => crawler.run(startUrls),
+        async () => {
+            // Use Crawlee v3's new addRequests method for better performance
+            log.info(`Adding ${startUrls.length} initial requests using Crawlee v3 batch method`);
+            await crawler.addRequests(startUrls);
+            
+            // Start the crawler without initial URLs (they're now in the queue)
+            await crawler.run();
+        },
         {
             maxRetries: 2,
             baseDelay: 5000,

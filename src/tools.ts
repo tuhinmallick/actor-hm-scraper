@@ -4,6 +4,9 @@ import { getMockStartUrls } from './debug.js';
 
 /**
  * Returns the initial list of Requests to start the crawl.
+ * 
+ * Note: These requests are now added using Crawlee v3's crawler.addRequests() method
+ * for better performance and batch processing.
  *
  * @param useMockStartRequests - When true, return mock start URLs for local debugging.
  * @param inputCountry - Exact country name from `COUNTRIES` to target in production mode.
