@@ -1,5 +1,8 @@
 import { CheerioCrawlerOptions } from 'crawlee';
 import { log } from 'crawlee';
+import { advancedSessionManager, generateAdvancedHeaders, generateIntelligentDelay, generateRealisticParams } from './advanced_stealth.js';
+import { behavioralSimulator } from './behavioral_simulation.js';
+import { concurrencyManager } from './concurrency_manager.js';
 
 /**
  * Comprehensive anti-bot detection evasion configuration
@@ -181,114 +184,99 @@ export const getEnhancedHeaders = (sessionId?: string): Record<string, string> =
 };
 
 /**
- * Configure crawler with comprehensive anti-bot evasion
+ * Configure crawler with comprehensive anti-bot evasion using advanced techniques
  */
 export const getAntiBotCrawlerConfig = (baseConfig: Partial<CheerioCrawlerOptions> = {}): Partial<CheerioCrawlerOptions> => {
-    // Initialize session
-    sessionManager.createSession();
+    // Initialize advanced session manager
+    advancedSessionManager.createSession();
+    
+    // Get optimal concurrency configuration
+    const concurrencyConfig = concurrencyManager.getCrawlerConfig();
     
     return {
         ...baseConfig,
+        ...concurrencyConfig,
+        
         // Request configuration
-        requestHandlerTimeoutSecs: 90, // Increased timeout
-        maxRequestRetries: 5, // Increased retries
+        requestHandlerTimeoutSecs: 120, // Increased timeout for complex interactions
+        maxRequestRetries: 7, // Increased retries with advanced backoff
         
         // Anti-bot evasion
-        additionalMimeTypes: ['text/html', 'application/json'],
+        additionalMimeTypes: ['text/html', 'application/json', 'application/xml'],
         ignoreSslErrors: false,
         
-        // Request interceptor for dynamic headers and session management
+        // Advanced request interceptor
         preNavigationHooks: [
             async (crawlingContext) => {
                 const { request } = crawlingContext;
                 
                 // Check if we should rotate session
-                if (sessionManager.shouldRotateSession()) {
-                    sessionManager.rotateSession();
-                    log.info('Rotated session due to request count');
+                if (advancedSessionManager.shouldRotateSession()) {
+                    advancedSessionManager.rotateSession();
+                    log.info('Rotated advanced session due to conditions');
                 }
                 
-                // Add intelligent delay based on request type and previous failures
-                const delay = getIntelligentDelay(request);
-                log.debug(`Adding delay of ${delay}ms before request to ${request.url}`);
+                // Get intelligent delay based on behavioral patterns
+                const delay = generateIntelligentDelay(
+                    advancedSessionManager.getCurrentSession()?.id,
+                    getRequestType(request.url)
+                );
+                log.debug(`Adding intelligent delay of ${delay}ms before request to ${request.url}`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 
-                // Set consistent headers for session
-                const session = sessionManager.getCurrentSession();
+                // Set advanced headers with complete fingerprint
+                const session = advancedSessionManager.getCurrentSession();
                 request.headers = {
                     ...request.headers,
-                    ...getEnhancedHeaders(session?.id),
+                    ...generateAdvancedHeaders(session?.id),
                 };
                 
                 // Add realistic query parameters
+                const realisticParams = generateRealisticParams(session?.id);
                 const url = new URL(request.url);
-                url.searchParams.set('_t', Date.now().toString());
-                url.searchParams.set('_r', Math.random().toString(36).substring(7));
-                
-                // Add browser-specific parameters
-                const userAgent = session?.userAgent || getRandomUserAgent();
-                if (userAgent.includes('Chrome')) {
-                    url.searchParams.set('_c', 'chrome');
-                } else if (userAgent.includes('Firefox')) {
-                    url.searchParams.set('_c', 'firefox');
-                }
-                
+                Object.entries(realisticParams).forEach(([key, value]) => {
+                    url.searchParams.set(key, value);
+                });
                 request.url = url.toString();
                 
-                // Increment session request count
-                sessionManager.incrementRequestCount();
+                // Record request start
+                advancedSessionManager.recordRequest(url.toString(), true);
             },
         ],
         
-        // Post-navigation hooks for additional stealth
+        // Advanced post-navigation hooks with behavioral simulation
         postNavigationHooks: [
             async (crawlingContext) => {
-                const { page, response } = crawlingContext;
+                const { page, response, request } = crawlingContext;
+                
+                const startTime = Date.now();
+                let wasBlocked = false;
                 
                 // Check for blocking indicators in response
-                if (response?.status === 403) {
-                    log.warning('403 detected, implementing countermeasures');
-                    await implementBlockingCountermeasures(crawlingContext);
+                if ((response as any)?.status === 403 || (response as any)?.status === 429) {
+                    log.warning('Blocking detected, implementing advanced countermeasures');
+                    wasBlocked = true;
+                    await implementAdvancedBlockingCountermeasures(crawlingContext);
                 }
                 
-                // Inject realistic browser behavior
+                // Simulate realistic browser behavior
                 if (page) {
                     try {
-                        await (page as any).evaluate(() => {
-                            // Simulate realistic mouse movements
-                            const movements = Math.floor(Math.random() * 5) + 3; // 3-7 movements
-                            for (let i = 0; i < movements; i++) {
-                                setTimeout(() => {
-                                    const event = new MouseEvent('mousemove', {
-                                        clientX: Math.random() * window.innerWidth,
-                                        clientY: Math.random() * window.innerHeight,
-                                    });
-                                    document.dispatchEvent(event);
-                                }, i * 200);
-                            }
-                            
-                            // Simulate realistic scrolling
-                            const scrollSteps = Math.floor(Math.random() * 3) + 1; // 1-3 scroll steps
-                            for (let i = 0; i < scrollSteps; i++) {
-                                setTimeout(() => {
-                                    window.scrollTo(0, Math.random() * document.body.scrollHeight);
-                                }, i * 500);
-                            }
-                            
-                            // Simulate focus events
-                            setTimeout(() => {
-                                window.focus();
-                                document.body.focus();
-                            }, 1000);
-                        });
+                        await behavioralSimulator.simulatePageInteraction(page, request.url);
                     } catch (error: any) {
-                        log.debug('Could not inject browser behavior:', error);
+                        log.debug('Behavioral simulation failed:', error);
                     }
                 }
+                
+                // Record request outcome for adaptive learning
+                const responseTime = Date.now() - startTime;
+                const success = !wasBlocked && (response as any)?.status < 400;
+                concurrencyManager.recordRequestOutcome(success, responseTime, wasBlocked);
+                advancedSessionManager.recordRequest(request.url, success);
             },
         ],
         
-        // Enhanced failed request handling with intelligent backoff
+        // Enhanced failed request handling with machine learning
         failedRequestHandler: async (context, error) => {
             const { request } = context;
             const retryCount = request.retryCount || 0;
@@ -297,34 +285,93 @@ export const getAntiBotCrawlerConfig = (baseConfig: Partial<CheerioCrawlerOption
             const errorMessage = error?.message || error?.toString() || '';
             const isBlocking = errorMessage.includes('403') || errorMessage.includes('blocked');
             const isRateLimit = errorMessage.includes('429') || errorMessage.includes('rate limit');
+            const isNetworkError = errorMessage.includes('timeout') || errorMessage.includes('ECONNRESET');
             
-            if (retryCount < 5) {
+            // Record failure for adaptive learning
+            concurrencyManager.recordRequestOutcome(false, 0, isBlocking);
+            advancedSessionManager.recordRequest(request.url, false);
+            
+            if (retryCount < 7) {
                 let backoffDelay: number;
                 
                 if (isBlocking) {
-                    // Longer delay for blocking
-                    backoffDelay = Math.pow(2, retryCount) * 5000; // 5s, 10s, 20s, 40s, 80s
-                    log.warning(`Blocking detected, implementing longer delay: ${backoffDelay}ms (attempt ${retryCount + 1}/5)`);
+                    // Advanced blocking handling with exponential backoff
+                    backoffDelay = Math.pow(2, retryCount) * 8000; // 8s, 16s, 32s, 64s, 128s, 256s, 512s
+                    log.warning(`Advanced blocking detected, implementing extended delay: ${backoffDelay}ms (attempt ${retryCount + 1}/7)`);
                     
-                    // Rotate session on blocking
-                    sessionManager.rotateSession();
+                    // Rotate session and implement countermeasures
+                    advancedSessionManager.rotateSession();
+                    await implementAdvancedBlockingCountermeasures(context);
+                    
                 } else if (isRateLimit) {
                     // Very long delay for rate limiting
-                    backoffDelay = Math.pow(2, retryCount) * 10000; // 10s, 20s, 40s, 80s, 160s
-                    log.warning(`Rate limit detected, implementing very long delay: ${backoffDelay}ms (attempt ${retryCount + 1}/5)`);
+                    backoffDelay = Math.pow(2, retryCount) * 15000; // 15s, 30s, 60s, 120s, 240s, 480s, 960s
+                    log.warning(`Rate limit detected, implementing very long delay: ${backoffDelay}ms (attempt ${retryCount + 1}/7)`);
+                    
+                } else if (isNetworkError) {
+                    // Moderate delay for network errors
+                    backoffDelay = Math.pow(2, retryCount) * 3000; // 3s, 6s, 12s, 24s, 48s, 96s, 192s
+                    log.warning(`Network error detected, implementing moderate delay: ${backoffDelay}ms (attempt ${retryCount + 1}/7)`);
+                    
                 } else {
                     // Standard exponential backoff
-                    backoffDelay = Math.pow(2, retryCount) * 2000; // 2s, 4s, 8s, 16s, 32s
-                    log.warning(`Request failed, retrying in ${backoffDelay}ms (attempt ${retryCount + 1}/5): ${request.url}`);
+                    backoffDelay = Math.pow(2, retryCount) * 2000; // 2s, 4s, 8s, 16s, 32s, 64s, 128s
+                    log.warning(`Request failed, retrying in ${backoffDelay}ms (attempt ${retryCount + 1}/7): ${request.url}`);
                 }
                 
-                await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                // Add jitter to prevent thundering herd
+                const jitter = backoffDelay * 0.1 * Math.random();
+                await new Promise(resolve => setTimeout(resolve, backoffDelay + jitter));
                 return;
             }
             
             log.error(`Request failed permanently after ${retryCount} retries: ${request.url}`, error);
         },
     };
+};
+
+/**
+ * Get request type for intelligent delay calculation
+ */
+function getRequestType(url: string): string {
+    if (url.includes('/produkte/') || url.includes('/products/')) {
+        return 'product';
+    } else if (url.includes('/apis/') || url.includes('/api/')) {
+        return 'api';
+    } else if (url.includes('/navigation/')) {
+        return 'navigation';
+    } else if (url.includes('/kategorien/') || url.includes('/categories/')) {
+        return 'category';
+    }
+    return 'generic';
+}
+
+/**
+ * Implement advanced blocking countermeasures
+ */
+const implementAdvancedBlockingCountermeasures = async (_context: any): Promise<void> => {
+    log.warning('Implementing advanced blocking countermeasures');
+    
+    // Rotate session immediately
+    advancedSessionManager.rotateSession();
+    
+    // Enter cooldown mode
+    concurrencyManager.updateAdaptiveConfig({ enableCooldownMode: true });
+    
+    // Add extra delay with behavioral patterns
+    const extraDelay = 20000 + Math.random() * 30000; // 20-50 seconds
+    log.info(`Adding advanced countermeasure delay of ${extraDelay}ms due to blocking`);
+    await new Promise(resolve => setTimeout(resolve, extraDelay));
+    
+    // Log countermeasures taken
+    log.info('Advanced blocking countermeasures implemented:', [
+        'Advanced session rotated',
+        'Behavioral patterns updated',
+        'Concurrency reduced',
+        'Extended delay added',
+        'Fingerprint refreshed',
+        'Request patterns modified'
+    ]);
 };
 
 /**
@@ -358,7 +405,7 @@ const getIntelligentDelay = (request: any): number => {
 /**
  * Implement blocking countermeasures
  */
-const implementBlockingCountermeasures = async (context: any): Promise<void> => {
+const implementBlockingCountermeasures = async (_context: any): Promise<void> => {
     log.warning('Implementing blocking countermeasures');
     
     // Rotate session immediately

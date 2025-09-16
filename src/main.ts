@@ -5,6 +5,9 @@ import { getStartUrls } from './tools.js';
 import actorStatistics from './actor_statistics.js';
 import { CONCURRENCY } from './constants.js';
 import { getAntiBotCrawlerConfig, smartScheduler } from './anti_bot.js';
+import { concurrencyManager } from './concurrency_manager.js';
+import { advancedSessionManager } from './advanced_stealth.js';
+import { behavioralSimulator } from './behavioral_simulation.js';
 import { createEnhancedErrorHandler, retryWithBackoff } from './error_handling.js';
 import { progressiveDataSaver, MemoryOptimizer, DataQualityMonitor } from './progressive_saving.js';
 import { DataPersistence } from './progressive_saving.js';
@@ -83,7 +86,7 @@ if (previousState) {
 const startUrls = getStartUrls(useMockRequests, inputCountry);
 
 // Enhanced proxy configuration with intelligent rotation
-let enhancedProxyConfig;
+let enhancedProxyConfig: any;
 try {
     enhancedProxyConfig = await getEnhancedProxyConfiguration();
     log.info('Enhanced proxy configuration loaded successfully');
@@ -109,27 +112,17 @@ try {
     log.warning('Proxy not configured or unavailable; continuing without a proxy.', error);
 }
 
-// Enhanced crawler configuration with all best practices
+// Advanced crawler configuration with cutting-edge anti-bot techniques
 const crawlerConfig = getAntiBotCrawlerConfig({
     proxyConfiguration,
-    maxConcurrency: CONCURRENCY, // Reduced concurrency for better stealth
     requestHandler: router,
     errorHandler: createEnhancedErrorHandler(),
     failedRequestHandler: createEnhancedErrorHandler(),
     // Additional optimizations
     maxRequestsPerCrawl: maxItems ? maxItems * 2 : undefined, // Allow some overhead
-    requestHandlerTimeoutSecs: 90, // Increased timeout
-    maxRequestRetries: 5, // Increased retries
     // Request optimization
-    additionalMimeTypes: ['text/html', 'application/json'],
+    additionalMimeTypes: ['text/html', 'application/json', 'application/xml'],
     ignoreSslErrors: false,
-    // Enhanced stealth settings
-    autoscaledPoolOptions: {
-        maxConcurrency: CONCURRENCY,
-        desiredConcurrency: Math.max(1, CONCURRENCY - 2), // Start with lower concurrency
-        scaleUpStepRatio: 0.1, // Slower scaling up
-        scaleDownStepRatio: 0.5, // Faster scaling down
-    },
 });
 
 const crawler = new CheerioCrawler(crawlerConfig);
@@ -155,6 +148,18 @@ if (typeof maxRunSeconds === 'number' && maxRunSeconds > 0) {
             // Log scheduler statistics
             const schedulerStats = smartScheduler.getStats();
             log.info('Final scheduler statistics:', schedulerStats);
+            
+            // Log advanced session statistics
+            const sessionStats = advancedSessionManager.getStats();
+            log.info('Final advanced session statistics:', sessionStats);
+            
+            // Log behavioral simulation statistics
+            const behavioralStats = behavioralSimulator.getStats();
+            log.info('Final behavioral simulation statistics:', behavioralStats);
+            
+            // Log concurrency management statistics
+            const concurrencyStats = concurrencyManager.getStats();
+            log.info('Final concurrency management statistics:', concurrencyStats);
             
             // Log proxy statistics
             if (enhancedProxyConfig) {
@@ -241,6 +246,18 @@ try {
         // Log scheduler statistics
         const schedulerStats = smartScheduler.getStats();
         log.info('Final scheduler statistics:', schedulerStats);
+        
+        // Log advanced session statistics
+        const sessionStats = advancedSessionManager.getStats();
+        log.info('Final advanced session statistics:', sessionStats);
+        
+        // Log behavioral simulation statistics
+        const behavioralStats = behavioralSimulator.getStats();
+        log.info('Final behavioral simulation statistics:', behavioralStats);
+        
+        // Log concurrency management statistics
+        const concurrencyStats = concurrencyManager.getStats();
+        log.info('Final concurrency management statistics:', concurrencyStats);
         
         // Log proxy statistics
         if (enhancedProxyConfig) {
