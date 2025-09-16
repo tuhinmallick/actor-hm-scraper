@@ -58,7 +58,8 @@ export const getProductionStartUrls = (inputCountry:string | undefined, ...extra
         throw new Error(`getProductionStartUrls expected 1 argument, received ${1 + extra.length}`);
     }
     if (!inputCountry) {
-        throw new Error('getProductionStartUrls: inputCountry is required');
+        const supportedCountries = COUNTRIES.map((c) => c.name).join(', ');
+        throw new Error(`getProductionStartUrls: inputCountry is required. Supported countries: ${supportedCountries}`);
     }
 
     const inputCountryDetails = COUNTRIES.filter((countryDetails) => countryDetails.name === inputCountry);
