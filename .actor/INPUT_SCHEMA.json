@@ -196,6 +196,12 @@
                     "salePrice", "currency", "colors", "sizes", "materials",
                     "images", "videos", "category", "url", "inStock", "stockLevel",
                     "sustainable", "rating", "reviews"
+                ],
+                "enumTitles": [
+                    "Product ID", "Title", "Description", "Price", "Original Price",
+                    "Sale Price", "Currency", "Colors", "Sizes", "Materials",
+                    "Images", "Videos", "Category", "URL", "In Stock", "Stock Level",
+                    "Sustainable", "Rating", "Reviews"
                 ]
             }
         },
