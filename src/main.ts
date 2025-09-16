@@ -14,15 +14,12 @@ interface InputSchema {
     maxItems?: number,
     maxRunSeconds?: number,
 }
-const { inputCountry, maxItems, maxRunSeconds } = (await Actor.getInput<InputSchema>())
+const { inputCountry, maxItems, maxRunSeconds, debug: inputDebug, useMockRequests } = (await Actor.getInput<InputSchema>())
 ?? {
     inputCountry: 'UNITED KINGDOM',
 };
 
-// debugging tools
-const debug = false;
-const useMockRequests = false;
-//
+const debug = Boolean(inputDebug);
 
 const startUrls = getStartUrls(useMockRequests, inputCountry);
 
@@ -30,7 +27,12 @@ if (debug) {
     log.setLevel(LogLevel.DEBUG);
 }
 
-const proxyConfiguration = await Actor.createProxyConfiguration();
+let proxyConfiguration;
+try {
+    proxyConfiguration = await Actor.createProxyConfiguration();
+} catch (error) {
+    log.warning('Proxy not configured or unavailable; continuing without a proxy.');
+}
 
 const crawler = new CheerioCrawler({
     proxyConfiguration,
