@@ -137,8 +137,9 @@ router.addHandler(Labels.PRODUCT, async ({ log, request, $, body, crawler }) => 
     const combinationImages = getAllCombinationImages($);
 
     const remaining = actorStatistics.remainingToLimit();
+    const sliceTo = remaining === null ? combinationInfo.length : remaining;
     const products = combinationInfo
-        .slice(0, Number.isFinite(remaining) ? remaining as number : combinationInfo.length)
+        .slice(0, sliceTo)
         .map((combination) => {
         const {
             listPrice,

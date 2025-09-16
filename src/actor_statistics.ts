@@ -67,6 +67,9 @@ class ActorStatistics {
         if (typeof limit === 'number' && limit > 0) {
             this.limit = limit;
         } else {
+            if (limit !== undefined) {
+                log.warning(`actor_statistics.setLimit: invalid limit "${limit}", expected positive number. Ignoring and disabling cap.`);
+            }
             this.limit = undefined;
         }
     }
@@ -81,7 +84,7 @@ class ActorStatistics {
     }
 
     remainingToLimit() {
-        if (typeof this.limit !== 'number') return Number.POSITIVE_INFINITY;
+        if (typeof this.limit !== 'number') return null;
         const remaining = this.limit - this.saved;
         return remaining > 0 ? remaining : 0;
     }
