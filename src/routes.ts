@@ -22,6 +22,8 @@ import { progressiveDataSaver, DataQualityMonitor } from './progressive_saving.j
 import { cleanAndValidateProduct, calculateProductQualityScore } from './data_validation.js';
 import { retryWithBackoff, classifyError } from './error_handling.js';
 import { smartScheduler, detectAndHandleBlocking } from './anti_bot.js';
+import { SmartDataExtractor } from './smart_extractor.js';
+import { HMUrlBuilder } from './url_builder.js';
 
 export const router = createCheerioRouter();
 
@@ -127,19 +129,19 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, $, body, crawler, 
     log.info(`${label}: country: ${country.name} - ${request.loadedUrl}`);
     
     try {
-        // Extract Next.js data from the page
-        const scriptMatch = (body as string).match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/s);
+        // Use smart extractor
+        const extractedData = SmartDataExtractor.extract(body as string, $);
         
-        if (scriptMatch) {
-            const jsonData = JSON.parse(scriptMatch[1]);
-            const products = jsonData?.props?.pageProps?.plpProps?.productListingProps?.hits;
+        if (extractedData && extractedData.products.length > 0) {
+            log.info(`Smart extractor found ${extractedData.products.length} products (total: ${extractedData.totalProducts})`);
             
-            if (products && products.length > 0) {
-                log.info(`Found ${products.length} products in Next.js data`);
-                
-                // Enqueue product URLs
+            // Check if we should extract detailed product info
+            const extractDetails = request.userData.extractProductDetails || false;
+            
+            if (extractDetails) {
+                // Enqueue product URLs for detailed extraction
                 const requests = [];
-                for (const product of products) {
+                for (const product of extractedData.products) {
                     if (product.pdpUrl) {
                         const productUrl = product.pdpUrl.startsWith('http') 
                             ? product.pdpUrl 
@@ -162,9 +164,92 @@ router.addHandler(Labels.SUB_CATEGORY, async ({ log, request, $, body, crawler, 
                 }
                 
                 await crawler.addRequests(requests);
-                log.info(`Enqueued ${requests.length} product URLs`);
+                log.info(`Enqueued ${requests.length} product URLs for detailed extraction`);
             } else {
-                log.warning('No products found in Next.js data');
+                // Save products directly without visiting product pages
+                let savedCount = 0;
+                for (const product of extractedData.products) {
+                    // Check limit
+                    if (actorStatistics.hasReachedLimit()) {
+                        log.info('Product limit reached. Stopping extraction.');
+                        break;
+                    }
+                    
+                    const uniqueProductKey = `${product.articleCode}_${country.code}`;
+                    
+                    // Skip if already scraped
+                    if (scrapedProducts[uniqueProductKey]) continue;
+                    scrapedProducts[uniqueProductKey] = true;
+                    
+                    const timestamp = new Date().toISOString();
+                    
+                    const rawProduct = {
+                        company: COMPANY,
+                        country: country.name,
+                        productName: product.title,
+                        articleNo: product.articleCode,
+                        division: divisionName,
+                        category: categoryName,
+                        subCategory: product.category,
+                        listPrice: parseFloat(product.regularPrice?.replace(/[^0-9.,]/g, '').replace(',', '.') || '0'),
+                        salePrice: product.redPrice ? parseFloat(product.redPrice.replace(/[^0-9.,]/g, '').replace(',', '.')) : null,
+                        currency: country.currency,
+                        description: '',
+                        url: product.pdpUrl.startsWith('http') ? product.pdpUrl : new URL(product.pdpUrl, BASE_URL).toString(),
+                        imageUrl: product.imageUrl,
+                        timestamp,
+                        colors: product.colors,
+                        sizes: product.sizes,
+                    };
+                    
+                    // Clean and validate product
+                    const cleanedProduct = cleanAndValidateProduct(rawProduct);
+                    if (!cleanedProduct) {
+                        log.warning('Product validation failed, skipping:', rawProduct);
+                        DataQualityMonitor.recordProduct(rawProduct as any, false, 0);
+                        continue;
+                    }
+                    
+                    // Calculate quality score
+                    const qualityScore = calculateProductQualityScore(cleanedProduct);
+                    DataQualityMonitor.recordProduct(cleanedProduct, true, qualityScore);
+                    
+                    // Save product progressively
+                    const saved = await progressiveDataSaver.addProduct(cleanedProduct);
+                    if (saved) {
+                        savedCount++;
+                        actorStatistics.incrementCounter(1);
+                        log.debug(`Saved product: ${cleanedProduct.productName} (${cleanedProduct.articleNo}) - Quality: ${qualityScore}`);
+                    }
+                }
+                
+                log.info(`Saved ${savedCount} products directly from listing page`);
+            }
+            
+            // Handle pagination
+            if (extractedData.totalProducts > extractedData.products.length) {
+                const currentOffset = parseInt(new URL(request.loadedUrl as string).searchParams.get('offset') || '0');
+                const pageSize = parseInt(new URL(request.loadedUrl as string).searchParams.get('page-size') || '36');
+                const maxOffset = Math.min(extractedData.totalProducts, request.userData.maxProducts || extractedData.totalProducts);
+                
+                if (currentOffset + pageSize < maxOffset) {
+                    // Enqueue next page
+                    const urlBuilder = new HMUrlBuilder(request.loadedUrl as string);
+                    const nextPageUrl = urlBuilder.applyPagination({ 
+                        offset: currentOffset + pageSize, 
+                        pageSize 
+                    }).build();
+                    
+                    await crawler.addRequests([{
+                        url: nextPageUrl,
+                        userData: request.userData,
+                    }]);
+                    
+                    log.info(`Enqueued next page: offset ${currentOffset + pageSize}`);
+                }
+            }
+        } else {
+            log.warning('Smart extractor found no products');
                 
                 // Fallback to traditional selector-based approach
                 await enqueueLinks({
